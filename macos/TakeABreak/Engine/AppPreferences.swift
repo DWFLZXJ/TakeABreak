@@ -13,6 +13,31 @@ struct TodoItem: Identifiable, Equatable, Sendable, Codable, Hashable {
     }
 }
 
+/// How hard it is to skip a break.
+enum SkipDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
+    case easy
+    case normal
+    case hard
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .easy: return "轻松"
+        case .normal: return "标准"
+        case .hard: return "严格"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .easy: return "按钮固定，长按即可跳过"
+        case .normal: return "缓慢移动，鼠标靠近稍后再躲开"
+        case .hard: return "跳动更快，躲开更积极"
+        }
+    }
+}
+
 struct AppPreferences: Equatable, Sendable, Codable {
     var workMinutes: Int
     var breakMinutes: Int
@@ -24,6 +49,10 @@ struct AppPreferences: Equatable, Sendable, Codable {
     var wallpaperFolderBookmark: Data?
     /// User-defined reminders shown on the break lock screen when enabled.
     var todos: [TodoItem]
+    /// Post a system notification when a break starts.
+    var notifyOnBreakStart: Bool
+    /// Skip button chase difficulty (only when allowLongPressSkip is true).
+    var skipDifficulty: SkipDifficulty
 
     static let `default` = AppPreferences(
         workMinutes: 25,
@@ -32,7 +61,9 @@ struct AppPreferences: Equatable, Sendable, Codable {
         allowLongPressSkip: true,
         wallpaperFolderPath: nil,
         wallpaperFolderBookmark: nil,
-        todos: []
+        todos: [],
+        notifyOnBreakStart: true,
+        skipDifficulty: .normal
     )
 
     static let workMinutesUIRange = 5...90
@@ -42,7 +73,6 @@ struct AppPreferences: Equatable, Sendable, Codable {
     mutating func clampForStorage() {
         workMinutes = min(max(workMinutes, Self.workMinutesUIRange.lowerBound), Self.workMinutesUIRange.upperBound)
         breakMinutes = min(max(breakMinutes, Self.breakMinutesRange.lowerBound), Self.breakMinutesRange.upperBound)
-        // Drop empty titles; cap count
         todos = todos
             .map { item in
                 var copy = item
@@ -60,7 +90,6 @@ struct AppPreferences: Equatable, Sendable, Codable {
         return trimmed.isEmpty ? "该休息一下了" : trimmed
     }
 
-    /// Non-empty, enabled todo texts for the break overlay.
     var activeTodoTexts: [String] {
         todos
             .filter(\.isEnabled)
@@ -75,10 +104,10 @@ struct AppPreferences: Equatable, Sendable, Codable {
         return (path as NSString).lastPathComponent
     }
 
-    // Backward-compatible decode: older prefs without `todos` still load.
     enum CodingKeys: String, CodingKey {
         case workMinutes, breakMinutes, customMessage, allowLongPressSkip
         case wallpaperFolderPath, wallpaperFolderBookmark, todos
+        case notifyOnBreakStart, skipDifficulty
     }
 
     init(
@@ -88,7 +117,9 @@ struct AppPreferences: Equatable, Sendable, Codable {
         allowLongPressSkip: Bool,
         wallpaperFolderPath: String?,
         wallpaperFolderBookmark: Data?,
-        todos: [TodoItem]
+        todos: [TodoItem],
+        notifyOnBreakStart: Bool,
+        skipDifficulty: SkipDifficulty
     ) {
         self.workMinutes = workMinutes
         self.breakMinutes = breakMinutes
@@ -97,6 +128,8 @@ struct AppPreferences: Equatable, Sendable, Codable {
         self.wallpaperFolderPath = wallpaperFolderPath
         self.wallpaperFolderBookmark = wallpaperFolderBookmark
         self.todos = todos
+        self.notifyOnBreakStart = notifyOnBreakStart
+        self.skipDifficulty = skipDifficulty
     }
 
     init(from decoder: Decoder) throws {
@@ -108,5 +141,7 @@ struct AppPreferences: Equatable, Sendable, Codable {
         wallpaperFolderPath = try c.decodeIfPresent(String.self, forKey: .wallpaperFolderPath)
         wallpaperFolderBookmark = try c.decodeIfPresent(Data.self, forKey: .wallpaperFolderBookmark)
         todos = try c.decodeIfPresent([TodoItem].self, forKey: .todos) ?? []
+        notifyOnBreakStart = try c.decodeIfPresent(Bool.self, forKey: .notifyOnBreakStart) ?? true
+        skipDifficulty = try c.decodeIfPresent(SkipDifficulty.self, forKey: .skipDifficulty) ?? .normal
     }
 }

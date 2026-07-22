@@ -17,6 +17,7 @@ final class BreakOverlayController {
         remainingMs: Int,
         progress: Double,
         allowSkip: Bool,
+        skipDifficulty: SkipDifficulty,
         wallpaperImage: NSImage?
     ) {
         hide()
@@ -29,6 +30,7 @@ final class BreakOverlayController {
                 remainingMs: remainingMs,
                 progress: progress,
                 allowSkip: allowSkip,
+                skipDifficulty: skipDifficulty,
                 wallpaperImage: wallpaperImage,
                 onSkip: { [weak self] in self?.onSkip?() }
             )
@@ -67,6 +69,7 @@ final class BreakOverlayController {
                 remainingMs: remainingMs,
                 progress: progress,
                 allowSkip: current.allowSkip,
+                skipDifficulty: current.skipDifficulty,
                 wallpaperImage: current.wallpaperImage,
                 onSkip: current.onSkip
             )

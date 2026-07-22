@@ -27,7 +27,9 @@ final class TimerEngineTests: XCTestCase {
             allowLongPressSkip: true,
             wallpaperFolderPath: nil,
             wallpaperFolderBookmark: nil,
-            todos: []
+            todos: [],
+            notifyOnBreakStart: true,
+            skipDifficulty: .normal
         ))
         e.start()
         let s = e.getState()
@@ -142,7 +144,9 @@ final class TimerEngineTests: XCTestCase {
             allowLongPressSkip: skip,
             wallpaperFolderPath: nil,
             wallpaperFolderBookmark: nil,
-            todos: []
+            todos: [],
+            notifyOnBreakStart: true,
+            skipDifficulty: .normal
         )
     }
 }

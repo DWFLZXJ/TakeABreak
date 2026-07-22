@@ -10,12 +10,18 @@ final class AppModel: ObservableObject {
         didSet {
             engine.setPreferences(preferences)
             PreferencesStore.save(preferences)
+            if preferences.notifyOnBreakStart {
+                BreakNotifier.requestPermissionIfNeeded()
+            }
         }
     }
 
     private let engine: TimerEngine
     private var tickTimer: Timer?
     private var sleepObservers: [NSObjectProtocol] = []
+    private var lockObservers: [NSObjectProtocol] = []
+    /// Reasons the clock is frozen (e.g. `sleep`, `lock`). Empty = running.
+    private var freezeReasons: Set<String> = []
     private let overlay = BreakOverlayController()
 
     init(engine: TimerEngine? = nil) {
@@ -27,6 +33,10 @@ final class AppModel: ObservableObject {
         self.state = eng.getState()
         startTicking()
         observeSleep()
+        observeScreenLock()
+        if prefs.notifyOnBreakStart {
+            BreakNotifier.requestPermissionIfNeeded()
+        }
         overlay.onSkip = { [weak self] in
             self?.skipBreak()
         }
@@ -37,7 +47,6 @@ final class AppModel: ObservableObject {
 
     // MARK: - Menu bar
 
-    /// Text shown next to the menu bar symbol (empty when idle — icon alone is enough).
     var menuBarTitle: String {
         switch state.phase {
         case .idle:
@@ -82,13 +91,11 @@ final class AppModel: ObservableObject {
 
     func openPreferences() {
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        // Fallback for older selector naming
         if #available(macOS 14.0, *) {
             NSApp.activate(ignoringOtherApps: true)
         }
     }
 
-    /// Stop timer, dismiss overlay, then terminate (menu bar apps have no Dock quit by default).
     func quit() {
         engine.stop()
         overlay.hide()
@@ -98,7 +105,6 @@ final class AppModel: ObservableObject {
 
     // MARK: - Wallpaper folder
 
-    /// Set the directory used for random break wallpapers. Returns error message or nil.
     @discardableResult
     func setWallpaperFolder(from url: URL) -> String? {
         let scoped = url.startAccessingSecurityScopedResource()
@@ -137,7 +143,6 @@ final class AppModel: ObservableObject {
         )
     }
 
-    /// New random image from the configured folder (or nil → overlay uses fallback gradient).
     func randomBreakWallpaper() -> NSImage? {
         WallpaperStore.randomImage(
             path: preferences.wallpaperFolderPath,
@@ -178,7 +183,7 @@ final class AppModel: ObservableObject {
         preferences = next
     }
 
-    // MARK: - Tick & sleep
+    // MARK: - Tick & system freeze
 
     private func startTicking() {
         tickTimer?.invalidate()
@@ -192,20 +197,15 @@ final class AppModel: ObservableObject {
     }
 
     private func onTick() {
+        // Screen lock / sleep: do not advance the clock.
+        guard freezeReasons.isEmpty else { return }
+
         let previous = state.phase
         engine.tick()
         publish()
         let next = state.phase
         if previous != .breaking && next == .breaking {
-            overlay.show(
-                message: displayMessage,
-                quote: QuoteLibrary.random(),
-                todos: preferences.activeTodoTexts,
-                remainingMs: state.remainingMs,
-                progress: state.progress,
-                allowSkip: preferences.allowLongPressSkip,
-                wallpaperImage: randomBreakWallpaper()
-            )
+            enterBreakUI()
         } else if previous == .breaking && next != .breaking {
             overlay.hide()
         } else if next == .breaking {
@@ -217,8 +217,43 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func enterBreakUI() {
+        let todos = preferences.activeTodoTexts
+        if preferences.notifyOnBreakStart {
+            BreakNotifier.notifyBreakStarted(
+                message: displayMessage,
+                todoCount: todos.count
+            )
+        }
+        overlay.show(
+            message: displayMessage,
+            quote: QuoteLibrary.random(),
+            todos: todos,
+            remainingMs: state.remainingMs,
+            progress: state.progress,
+            allowSkip: preferences.allowLongPressSkip,
+            skipDifficulty: preferences.skipDifficulty,
+            wallpaperImage: randomBreakWallpaper()
+        )
+    }
+
     private func publish() {
         state = engine.getState()
+    }
+
+    private func freezeTimer(reason: String) {
+        let wasEmpty = freezeReasons.isEmpty
+        freezeReasons.insert(reason)
+        if wasEmpty {
+            engine.noteSleep()
+        }
+    }
+
+    private func unfreezeTimer(reason: String) {
+        freezeReasons.remove(reason)
+        if freezeReasons.isEmpty {
+            engine.noteWake()
+        }
     }
 
     private func observeSleep() {
@@ -229,7 +264,7 @@ final class AppModel: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.engine.noteSleep()
+                self?.freezeTimer(reason: "sleep")
             }
         }
         let didWake = nc.addObserver(
@@ -238,9 +273,33 @@ final class AppModel: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.engine.noteWake()
+                self?.unfreezeTimer(reason: "sleep")
             }
         }
         sleepObservers = [willSleep, didWake]
+    }
+
+    /// Pause countdown while the macOS login/lock screen is active.
+    private func observeScreenLock() {
+        let dnc = DistributedNotificationCenter.default()
+        let locked = dnc.addObserver(
+            forName: NSNotification.Name("com.apple.screenIsLocked"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.freezeTimer(reason: "lock")
+            }
+        }
+        let unlocked = dnc.addObserver(
+            forName: NSNotification.Name("com.apple.screenIsUnlocked"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.unfreezeTimer(reason: "lock")
+            }
+        }
+        lockObservers = [locked, unlocked]
     }
 }

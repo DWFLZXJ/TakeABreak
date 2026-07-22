@@ -123,6 +123,27 @@ struct PreferencesView: View {
                 Text("关闭后须等休息倒计时结束")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if model.preferences.allowLongPressSkip {
+                    Picker("跳过难度", selection: skipDifficultyBinding) {
+                        ForEach(SkipDifficulty.allCases) { level in
+                            Text(level.title).tag(level)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    Text(model.preferences.skipDifficulty.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Toggle("进入休息时发送系统通知", isOn: notifyBinding)
+                Text("到点全屏休息时额外弹一条通知（需授权通知权限）")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text("锁屏时会暂停计时，解锁后从剩余时间继续。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } header: {
                 Text("行为")
             }
@@ -262,6 +283,25 @@ struct PreferencesView: View {
         Binding(
             get: { model.preferences.allowLongPressSkip },
             set: { model.preferences.allowLongPressSkip = $0 }
+        )
+    }
+
+    private var notifyBinding: Binding<Bool> {
+        Binding(
+            get: { model.preferences.notifyOnBreakStart },
+            set: { enabled in
+                model.preferences.notifyOnBreakStart = enabled
+                if enabled {
+                    BreakNotifier.requestPermissionIfNeeded()
+                }
+            }
+        )
+    }
+
+    private var skipDifficultyBinding: Binding<SkipDifficulty> {
+        Binding(
+            get: { model.preferences.skipDifficulty },
+            set: { model.preferences.skipDifficulty = $0 }
         )
     }
 

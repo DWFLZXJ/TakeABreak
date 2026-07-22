@@ -10,6 +10,7 @@ struct BreakOverlayView: View {
     let remainingMs: Int
     let progress: Double
     let allowSkip: Bool
+    let skipDifficulty: SkipDifficulty
     let wallpaperImage: NSImage?
 
     var onSkip: () -> Void
@@ -30,10 +31,40 @@ struct BreakOverlayView: View {
     private let holdDuration: TimeInterval = 2.0
     private let skipButtonSize: CGFloat = 84
     private let labelExtraHeight: CGFloat = 28
-    /// Auto-jump interval (slower = easier to catch).
-    private let fleeIntervalNs: ClosedRange<UInt64> = 2_200_000_000...3_600_000_000
-    /// Grace time after pointer enters before it flees — enough to click/hold.
-    private let hoverFleeDelayNs: UInt64 = 450_000_000
+
+    private var flees: Bool { skipDifficulty != .easy }
+
+    private var fleeIntervalNs: ClosedRange<UInt64> {
+        switch skipDifficulty {
+        case .easy: return 0...0
+        case .normal: return 2_200_000_000...3_600_000_000
+        case .hard: return 700_000_000...1_300_000_000
+        }
+    }
+
+    private var hoverFleeDelayNs: UInt64 {
+        switch skipDifficulty {
+        case .easy: return .max
+        case .normal: return 450_000_000
+        case .hard: return 180_000_000
+        }
+    }
+
+    private var maxJumpRatio: CGFloat {
+        switch skipDifficulty {
+        case .easy: return 0
+        case .normal: return 0.35
+        case .hard: return 0.55
+        }
+    }
+
+    private var skipHintText: String {
+        switch skipDifficulty {
+        case .easy: return "长按「跳过」2 秒结束休息"
+        case .normal: return "抓住缓慢移动的「跳过」并长按 2 秒"
+        case .hard: return "追上乱跳的「跳过」并长按 2 秒"
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -130,7 +161,7 @@ struct BreakOverlayView: View {
                 .frame(width: 160, height: 2)
 
                 if allowSkip {
-                    Text("抓住乱跳的「跳过」并长按 2 秒")
+                    Text(skipHintText)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.white.opacity(0.28))
                         .padding(.top, 20)
@@ -140,8 +171,8 @@ struct BreakOverlayView: View {
             if allowSkip {
                 GeometryReader { geo in
                     ZStack {
-                        // Ghost trail
-                        if let ghost = ghostOrigin, !isHolding {
+                        // Ghost trail (moving modes only)
+                        if flees, let ghost = ghostOrigin, !isHolding {
                             skipButtonVisual(hold: 0, interactive: false)
                                 .position(ghost)
                                 .opacity(0.22)
@@ -150,15 +181,19 @@ struct BreakOverlayView: View {
                         }
 
                         skipButton
-                            .position(skipOrigin == .zero ? CGPoint(x: geo.size.width / 2, y: geo.size.height - 80) : skipOrigin)
+                            .position(resolvedSkipPosition(in: geo.size))
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
                     .onAppear {
                         containerSize = geo.size
                         if skipOrigin == .zero {
-                            skipOrigin = randomPoint(in: geo.size)
+                            skipOrigin = flees
+                                ? randomPoint(in: geo.size)
+                                : fixedBottomCenter(in: geo.size)
                         }
-                        startFleeLoop()
+                        if flees {
+                            startFleeLoop()
+                        }
                         withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
                             spinAngle = 360
                         }
@@ -168,7 +203,11 @@ struct BreakOverlayView: View {
                     }
                     .onChange(of: geo.size) { newSize in
                         containerSize = newSize
-                        skipOrigin = clamp(skipOrigin, in: newSize)
+                        if flees {
+                            skipOrigin = clamp(skipOrigin, in: newSize)
+                        } else {
+                            skipOrigin = fixedBottomCenter(in: newSize)
+                        }
                     }
                     .onDisappear {
                         stopFleeLoop()
@@ -189,6 +228,7 @@ struct BreakOverlayView: View {
                 // Larger hit area so catching is fairer
                 .contentShape(Circle().scale(1.35))
                 .onHover { hovering in
+                    guard flees else { return }
                     hoverFleeTask?.cancel()
                     hoverFleeTask = nil
                     // Delay flee so the user has a window to press and hold.
@@ -196,7 +236,7 @@ struct BreakOverlayView: View {
                     hoverFleeTask = Task { @MainActor in
                         try? await Task.sleep(nanoseconds: hoverFleeDelayNs)
                         guard !Task.isCancelled, !isHolding else { return }
-                        fleeNow(maxJumpRatio: 0.35)
+                        fleeNow(maxJumpRatio: maxJumpRatio)
                     }
                 }
                 .gesture(
@@ -281,10 +321,10 @@ struct BreakOverlayView: View {
                 .frame(width: skipButtonSize - 6, height: skipButtonSize - 6)
 
             VStack(spacing: 2) {
-                Image(systemName: isHolding ? "hand.tap.fill" : "hare.fill")
+                Image(systemName: isHolding ? "hand.tap.fill" : (flees ? "hare.fill" : "hand.tap"))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.white.opacity(0.85))
-                    .symbolEffect(.bounce, value: skipOrigin.x)
+                    .symbolEffect(.bounce, value: flees ? skipOrigin.x : 0)
                 Text("跳过")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.white.opacity(0.8))
@@ -297,7 +337,22 @@ struct BreakOverlayView: View {
 
     // MARK: - Flee motion
 
+    private func resolvedSkipPosition(in size: CGSize) -> CGPoint {
+        if !flees {
+            return fixedBottomCenter(in: size)
+        }
+        if skipOrigin == .zero {
+            return fixedBottomCenter(in: size)
+        }
+        return skipOrigin
+    }
+
+    private func fixedBottomCenter(in size: CGSize) -> CGPoint {
+        CGPoint(x: size.width / 2, y: max(skipButtonSize + 40, size.height - 96))
+    }
+
     private func startFleeLoop() {
+        guard flees else { return }
         stopFleeLoop()
         fleeTask = Task { @MainActor in
             while !Task.isCancelled {
@@ -305,8 +360,7 @@ struct BreakOverlayView: View {
                 try? await Task.sleep(nanoseconds: ns)
                 if Task.isCancelled { break }
                 if !isHolding {
-                    // Short hops — still playful, but catchable.
-                    fleeNow(maxJumpRatio: 0.35)
+                    fleeNow(maxJumpRatio: maxJumpRatio)
                 }
             }
         }
