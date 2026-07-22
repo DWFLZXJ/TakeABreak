@@ -6,29 +6,50 @@ struct PreferencesView: View {
     @EnvironmentObject private var model: AppModel
     @State private var isPickingFolder = false
     @State private var folderError: String?
+    /// Draft strings so typing isn't interrupted by clamp-on-every-keystroke.
+    @State private var workMinutesText = ""
+    @State private var breakMinutesText = ""
+    @FocusState private var focusedField: DurationField?
+
+    private enum DurationField: Hashable {
+        case work
+        case breakTime
+    }
 
     var body: some View {
         Form {
             Section {
-                Stepper(value: workMinutesBinding, in: AppPreferences.workMinutesUIRange) {
-                    HStack {
-                        Text("工作")
-                        Spacer()
-                        Text("\(model.preferences.workMinutes) 分钟")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
+                HStack {
+                    Text("工作")
+                    Spacer()
+                    TextField("25", text: $workMinutesText)
+                        .labelsHidden()
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 72)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .work)
+                        .onSubmit { commitWorkMinutes() }
+                    Text("分钟")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 36, alignment: .leading)
                 }
-                Stepper(value: breakMinutesBinding, in: AppPreferences.breakMinutesRange) {
-                    HStack {
-                        Text("休息")
-                        Spacer()
-                        Text("\(model.preferences.breakMinutes) 分钟")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
+
+                HStack {
+                    Text("休息")
+                    Spacer()
+                    TextField("5", text: $breakMinutesText)
+                        .labelsHidden()
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 72)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .breakTime)
+                        .onSubmit { commitBreakMinutes() }
+                    Text("分钟")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 36, alignment: .leading)
                 }
-                Text("修改将于下一轮生效")
+
+                Text("直接输入数字，回车或点别处生效。工作 \(AppPreferences.workMinutesUIRange.lowerBound)–\(AppPreferences.workMinutesUIRange.upperBound) 分钟，休息 \(AppPreferences.breakMinutesRange.lowerBound)–\(AppPreferences.breakMinutesRange.upperBound) 分钟；修改将于下一轮生效。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } header: {
@@ -75,6 +96,8 @@ struct PreferencesView: View {
 
                 HStack(spacing: 12) {
                     Button("选择壁纸文件夹…") {
+                        commitWorkMinutes()
+                        commitBreakMinutes()
                         NSApp.activate(ignoringOtherApps: true)
                         isPickingFolder = true
                     }
@@ -99,8 +122,35 @@ struct PreferencesView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 480)
+        .frame(width: 440, height: 500)
         .padding()
+        .onAppear {
+            workMinutesText = "\(model.preferences.workMinutes)"
+            breakMinutesText = "\(model.preferences.breakMinutes)"
+        }
+        .onChange(of: focusedField) { newFocus in
+            // Commit when leaving a field.
+            if newFocus != .work {
+                commitWorkMinutes()
+            }
+            if newFocus != .breakTime {
+                commitBreakMinutes()
+            }
+        }
+        .onChange(of: model.preferences.workMinutes) { value in
+            if focusedField != .work {
+                workMinutesText = "\(value)"
+            }
+        }
+        .onChange(of: model.preferences.breakMinutes) { value in
+            if focusedField != .breakTime {
+                breakMinutesText = "\(value)"
+            }
+        }
+        .onDisappear {
+            commitWorkMinutes()
+            commitBreakMinutes()
+        }
         .fileImporter(
             isPresented: $isPickingFolder,
             allowedContentTypes: [.folder],
@@ -120,18 +170,30 @@ struct PreferencesView: View {
         }
     }
 
-    private var workMinutesBinding: Binding<Int> {
-        Binding(
-            get: { model.preferences.workMinutes },
-            set: { model.preferences.workMinutes = $0 }
-        )
+    // MARK: - Commit helpers
+
+    private func commitWorkMinutes() {
+        let range = AppPreferences.workMinutesUIRange
+        let parsed = Int(workMinutesText.trimmingCharacters(in: .whitespacesAndNewlines))
+        let value = clamp(parsed ?? model.preferences.workMinutes, in: range)
+        if model.preferences.workMinutes != value {
+            model.preferences.workMinutes = value
+        }
+        workMinutesText = "\(value)"
     }
 
-    private var breakMinutesBinding: Binding<Int> {
-        Binding(
-            get: { model.preferences.breakMinutes },
-            set: { model.preferences.breakMinutes = $0 }
-        )
+    private func commitBreakMinutes() {
+        let range = AppPreferences.breakMinutesRange
+        let parsed = Int(breakMinutesText.trimmingCharacters(in: .whitespacesAndNewlines))
+        let value = clamp(parsed ?? model.preferences.breakMinutes, in: range)
+        if model.preferences.breakMinutes != value {
+            model.preferences.breakMinutes = value
+        }
+        breakMinutesText = "\(value)"
+    }
+
+    private func clamp(_ value: Int, in range: ClosedRange<Int>) -> Int {
+        min(max(value, range.lowerBound), range.upperBound)
     }
 
     private var messageBinding: Binding<String> {
