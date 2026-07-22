@@ -15,14 +15,9 @@ final class BreakOverlayController {
         remainingMs: Int,
         progress: Double,
         allowSkip: Bool,
-        wallpaperId: String,
         wallpaperImage: NSImage?
     ) {
         hide()
-
-        // Prefer the preloaded image; fall back to Application Support for custom.
-        let image = wallpaperImage
-            ?? (wallpaperId == "custom" ? WallpaperStore.loadCustomImage() : nil)
 
         for screen in NSScreen.screens {
             let view = BreakOverlayView(
@@ -30,8 +25,7 @@ final class BreakOverlayController {
                 remainingMs: remainingMs,
                 progress: progress,
                 allowSkip: allowSkip,
-                wallpaperId: wallpaperId,
-                wallpaperImage: image,
+                wallpaperImage: wallpaperImage,
                 onSkip: { [weak self] in self?.onSkip?() }
             )
             let hosting = NSHostingView(rootView: view)
@@ -67,7 +61,6 @@ final class BreakOverlayController {
                 remainingMs: remainingMs,
                 progress: progress,
                 allowSkip: current.allowSkip,
-                wallpaperId: current.wallpaperId,
                 wallpaperImage: current.wallpaperImage,
                 onSkip: current.onSkip
             )

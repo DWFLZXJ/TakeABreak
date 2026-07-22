@@ -4,10 +4,8 @@ import UniformTypeIdentifiers
 
 struct PreferencesView: View {
     @EnvironmentObject private var model: AppModel
-    @State private var isImportingWallpaper = false
-    @State private var importError: String?
-    /// Bumps when custom wallpaper changes so the thumbnail refreshes.
-    @State private var customThumbToken = 0
+    @State private var isPickingFolder = false
+    @State private var folderError: String?
 
     var body: some View {
         Form {
@@ -54,102 +52,72 @@ struct PreferencesView: View {
             }
 
             Section {
-                HStack(spacing: 12) {
-                    wallpaperThumb(id: "default-1", colors: [.indigo, .purple])
-                    wallpaperThumb(id: "default-2", colors: [.pink, .orange])
-                    wallpaperThumb(id: "default-3", colors: [.cyan, .blue])
-                    customWallpaperButton
-                }
-                if model.preferences.wallpaperId == "custom" {
-                    Text("已使用自定义图片作为休息壁纸")
-                        .font(.caption)
+                HStack {
+                    Text("文件夹")
+                    Spacer()
+                    Text(model.preferences.wallpaperFolderDisplayName)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                if let path = model.preferences.wallpaperFolderPath {
+                    Text(path)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .textSelection(.enabled)
+                    wallpaperCountLabel
                 } else {
-                    Text("点击 + 选择本地图片")
+                    Text("未设置时使用默认深色背景")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                if let importError {
-                    Text(importError)
+
+                HStack(spacing: 12) {
+                    Button("选择壁纸文件夹…") {
+                        NSApp.activate(ignoringOtherApps: true)
+                        isPickingFolder = true
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    if model.preferences.wallpaperFolderPath != nil {
+                        Button("清除") {
+                            folderError = nil
+                            model.clearWallpaperFolder()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+
+                if let folderError {
+                    Text(folderError)
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
             } header: {
-                Text("休息壁纸")
+                Text("休息壁纸目录")
             }
         }
         .formStyle(.grouped)
         .frame(width: 420, height: 480)
         .padding()
         .fileImporter(
-            isPresented: $isImportingWallpaper,
-            allowedContentTypes: [.image],
+            isPresented: $isPickingFolder,
+            allowedContentTypes: [.folder],
             allowsMultipleSelection: false
         ) { result in
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
-                if let err = model.applyCustomWallpaper(from: url) {
-                    importError = err
+                if let err = model.setWallpaperFolder(from: url) {
+                    folderError = err
                 } else {
-                    importError = nil
-                    customThumbToken += 1
+                    folderError = nil
                 }
             case .failure(let error):
-                importError = "无法选择图片：\(error.localizedDescription)"
+                folderError = "无法选择文件夹：\(error.localizedDescription)"
             }
         }
-        .onAppear {
-            // If prefs say custom but file missing, fall back quietly is handled at break time.
-            customThumbToken += 1
-        }
-    }
-
-    private var customWallpaperButton: some View {
-        let selected = model.preferences.wallpaperId == "custom"
-        return Button {
-            NSApp.activate(ignoringOtherApps: true)
-            isImportingWallpaper = true
-        } label: {
-            ZStack {
-                if let img = model.customWallpaperImage(), selected {
-                    Image(nsImage: img)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 72, height: 48)
-                        .clipped()
-                        .cornerRadius(8)
-                        .id(customThumbToken)
-                } else if let img = model.customWallpaperImage() {
-                    Image(nsImage: img)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 72, height: 48)
-                        .clipped()
-                        .cornerRadius(8)
-                        .opacity(0.85)
-                        .overlay(
-                            Image(systemName: "plus")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .shadow(radius: 2)
-                        )
-                        .id(customThumbToken)
-                } else {
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                        .frame(width: 72, height: 48)
-                    Image(systemName: "plus")
-                }
-            }
-            .frame(width: 72, height: 48)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(selected ? Color.accentColor : Color.clear, lineWidth: 2)
-            )
-        }
-        .buttonStyle(.plain)
-        .help("选择本地图片")
     }
 
     private var workMinutesBinding: Binding<Int> {
@@ -180,21 +148,11 @@ struct PreferencesView: View {
         )
     }
 
-    private func wallpaperThumb(id: String, colors: [Color]) -> some View {
-        let selected = model.preferences.wallpaperId == id
-        return Button {
-            importError = nil
-            model.selectBuiltinWallpaper(id: id)
-            customThumbToken += 1
-        } label: {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 72, height: 48)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(selected ? Color.accentColor : Color.clear, lineWidth: 2)
-                )
-        }
-        .buttonStyle(.plain)
+    @ViewBuilder
+    private var wallpaperCountLabel: some View {
+        let count = model.wallpaperFolderImageCount
+        Text(count > 0 ? "共 \(count) 张图片 · 每次休息随机一张" : "未找到图片")
+            .font(.caption)
+            .foregroundStyle(count > 0 ? Color.secondary : Color.red)
     }
 }

@@ -23,10 +23,10 @@ final class TimerEngineTests: XCTestCase {
         e.setPreferences(AppPreferences(
             workMinutes: 25,
             breakMinutes: 5,
-            wallpaperId: "default-1",
             customMessage: "hi",
             allowLongPressSkip: true,
-            wallpaperBookmark: nil
+            wallpaperFolderPath: nil,
+            wallpaperFolderBookmark: nil
         ))
         e.start()
         let s = e.getState()
@@ -137,10 +137,10 @@ final class TimerEngineTests: XCTestCase {
         AppPreferences(
             workMinutes: work,
             breakMinutes: br,
-            wallpaperId: "default-1",
             customMessage: message,
             allowLongPressSkip: skip,
-            wallpaperBookmark: nil
+            wallpaperFolderPath: nil,
+            wallpaperFolderBookmark: nil
         )
     }
 }

@@ -6,7 +6,6 @@ struct BreakOverlayView: View {
     let remainingMs: Int
     let progress: Double
     let allowSkip: Bool
-    let wallpaperId: String
     let wallpaperImage: NSImage?
 
     var onSkip: () -> Void
@@ -18,7 +17,7 @@ struct BreakOverlayView: View {
 
     var body: some View {
         ZStack {
-            wallpaper
+            wallpaperLayer
             Color.black.opacity(0.32)
             RadialGradient(
                 colors: [.clear, .black.opacity(0.28)],
@@ -71,7 +70,7 @@ struct BreakOverlayView: View {
     }
 
     @ViewBuilder
-    private var wallpaper: some View {
+    private var wallpaperLayer: some View {
         if let wallpaperImage {
             Image(nsImage: wallpaperImage)
                 .resizable()
@@ -80,7 +79,11 @@ struct BreakOverlayView: View {
                 .clipped()
         } else {
             LinearGradient(
-                colors: gradientColors(for: wallpaperId),
+                colors: [
+                    Color(red: 0.12, green: 0.14, blue: 0.18),
+                    Color(red: 0.18, green: 0.22, blue: 0.28),
+                    Color(red: 0.10, green: 0.11, blue: 0.14)
+                ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -135,16 +138,5 @@ struct BreakOverlayView: View {
         holdTask?.cancel()
         holdTask = nil
         holdProgress = 0
-    }
-
-    private func gradientColors(for id: String) -> [Color] {
-        switch id {
-        case "default-2":
-            return [Color(red: 0.94, green: 0.58, blue: 0.98), Color(red: 0.96, green: 0.34, blue: 0.42)]
-        case "default-3":
-            return [Color(red: 0.31, green: 0.67, blue: 1.0), Color(red: 0.0, green: 0.95, blue: 1.0)]
-        default:
-            return [Color(red: 0.15, green: 0.18, blue: 0.28), Color(red: 0.28, green: 0.35, blue: 0.55), Color(red: 0.12, green: 0.14, blue: 0.22)]
-        }
     }
 }

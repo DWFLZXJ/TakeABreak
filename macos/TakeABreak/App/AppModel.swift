@@ -96,37 +96,53 @@ final class AppModel: ObservableObject {
         NSApp.terminate(nil)
     }
 
-    // MARK: - Wallpaper prefs
+    // MARK: - Wallpaper folder
 
-    func selectBuiltinWallpaper(id: String) {
-        WallpaperStore.clearCustomFiles()
+    /// Set the directory used for random break wallpapers. Returns error message or nil.
+    @discardableResult
+    func setWallpaperFolder(from url: URL) -> String? {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer {
+            if scoped { url.stopAccessingSecurityScopedResource() }
+        }
+
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else {
+            return "请选择一个文件夹"
+        }
+
+        let count = WallpaperStore.listImages(in: url).count
+        guard count > 0 else {
+            return "该文件夹中没有图片（支持 jpg / png / heic 等）"
+        }
+
         var next = preferences
-        next.wallpaperId = id
-        next.wallpaperBookmark = nil
+        next.wallpaperFolderPath = url.path
+        next.wallpaperFolderBookmark = WallpaperStore.makeBookmark(for: url)
+        preferences = next
+        return nil
+    }
+
+    func clearWallpaperFolder() {
+        var next = preferences
+        next.wallpaperFolderPath = nil
+        next.wallpaperFolderBookmark = nil
         preferences = next
     }
 
-    /// Copy the picked image into Application Support and mark wallpaper as custom.
-    /// Returns an error message on failure (nil on success).
-    @discardableResult
-    func applyCustomWallpaper(from url: URL) -> String? {
-        do {
-            _ = try WallpaperStore.saveCustom(from: url)
-            var next = preferences
-            next.wallpaperId = "custom"
-            // Bookmarks are unreliable without App Sandbox; file copy is the source of truth.
-            next.wallpaperBookmark = nil
-            preferences = next
-            return nil
-        } catch {
-            return error.localizedDescription
-        }
+    var wallpaperFolderImageCount: Int {
+        WallpaperStore.imageCount(
+            path: preferences.wallpaperFolderPath,
+            bookmark: preferences.wallpaperFolderBookmark
+        )
     }
 
-    /// Image used for break overlay / prefs thumbnail when `wallpaperId == custom`.
-    func customWallpaperImage() -> NSImage? {
-        guard preferences.wallpaperId == "custom" else { return nil }
-        return WallpaperStore.loadCustomImage()
+    /// New random image from the configured folder (or nil → overlay uses fallback gradient).
+    func randomBreakWallpaper() -> NSImage? {
+        WallpaperStore.randomImage(
+            path: preferences.wallpaperFolderPath,
+            bookmark: preferences.wallpaperFolderBookmark
+        )
     }
 
     // MARK: - Tick & sleep
@@ -153,8 +169,7 @@ final class AppModel: ObservableObject {
                 remainingMs: state.remainingMs,
                 progress: state.progress,
                 allowSkip: preferences.allowLongPressSkip,
-                wallpaperId: preferences.wallpaperId,
-                wallpaperImage: customWallpaperImage()
+                wallpaperImage: randomBreakWallpaper()
             )
         } else if previous == .breaking && next != .breaking {
             overlay.hide()

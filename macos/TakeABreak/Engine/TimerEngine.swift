@@ -9,7 +9,6 @@ struct TimerState: Equatable, Sendable {
     var lockedBreakMinutes: Int
     var workMinutes: Int
     var breakMinutes: Int
-    var wallpaperId: String
     var customMessage: String
     var allowLongPressSkip: Bool
     /// 0...1 elapsed ratio for the current working/breaking segment.
@@ -54,7 +53,6 @@ final class TimerEngine: @unchecked Sendable {
             lockedBreakMinutes: lockedBreakMinutes,
             workMinutes: prefs.workMinutes,
             breakMinutes: prefs.breakMinutes,
-            wallpaperId: prefs.wallpaperId,
             customMessage: prefs.customMessage,
             allowLongPressSkip: prefs.allowLongPressSkip,
             progress: progressRatio()

@@ -1,7 +1,8 @@
 import Foundation
 
 enum PreferencesStore {
-    private static let key = "takeabreak.prefs.v1"
+    /// v2: wallpaper folder path (random pick) instead of single image / builtin ids.
+    private static let key = "takeabreak.prefs.v2"
 
     static func load() -> AppPreferences {
         guard let data = UserDefaults.standard.data(forKey: key) else {
