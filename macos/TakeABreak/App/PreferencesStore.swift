@@ -1,20 +1,25 @@
 import Foundation
 
 enum PreferencesStore {
-    /// v2: wallpaper folder path (random pick) instead of single image / builtin ids.
-    private static let key = "takeabreak.prefs.v2"
+    /// Current prefs key. Also tries previous keys for migration.
+    private static let key = "takeabreak.prefs.v3"
+    private static let legacyKeys = ["takeabreak.prefs.v2", "takeabreak.prefs.v1"]
 
     static func load() -> AppPreferences {
-        guard let data = UserDefaults.standard.data(forKey: key) else {
-            return .default
+        let defaults = UserDefaults.standard
+        for candidate in [key] + legacyKeys {
+            guard let data = defaults.data(forKey: candidate) else { continue }
+            if var prefs = try? JSONDecoder().decode(AppPreferences.self, from: data) {
+                prefs.clampForStorage()
+                // Migrate forward
+                if candidate != key {
+                    save(prefs)
+                    defaults.removeObject(forKey: candidate)
+                }
+                return prefs
+            }
         }
-        do {
-            var prefs = try JSONDecoder().decode(AppPreferences.self, from: data)
-            prefs.clampForStorage()
-            return prefs
-        } catch {
-            return .default
-        }
+        return .default
     }
 
     static func save(_ prefs: AppPreferences) {

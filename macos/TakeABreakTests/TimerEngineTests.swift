@@ -26,7 +26,8 @@ final class TimerEngineTests: XCTestCase {
             customMessage: "hi",
             allowLongPressSkip: true,
             wallpaperFolderPath: nil,
-            wallpaperFolderBookmark: nil
+            wallpaperFolderBookmark: nil,
+            todos: []
         ))
         e.start()
         let s = e.getState()
@@ -140,7 +141,8 @@ final class TimerEngineTests: XCTestCase {
             customMessage: message,
             allowLongPressSkip: skip,
             wallpaperFolderPath: nil,
-            wallpaperFolderBookmark: nil
+            wallpaperFolderBookmark: nil,
+            todos: []
         )
     }
 }

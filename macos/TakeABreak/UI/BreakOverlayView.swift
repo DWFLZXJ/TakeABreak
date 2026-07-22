@@ -5,6 +5,8 @@ struct BreakOverlayView: View {
     let message: String
     /// Random famous quote / poem line for this break session.
     let quote: QuoteItem
+    /// Enabled todo reminder lines for this break.
+    let todos: [String]
     let remainingMs: Int
     let progress: Double
     let allowSkip: Bool
@@ -65,6 +67,44 @@ struct BreakOverlayView: View {
                         .foregroundStyle(.white.opacity(0.45))
                 }
                 .padding(.top, 4)
+
+                if !todos.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("待办提醒")
+                            .font(.system(size: 11, weight: .semibold))
+                            .tracking(2)
+                            .foregroundStyle(.white.opacity(0.4))
+                            .frame(maxWidth: .infinity, alignment: .center)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(Array(todos.prefix(8).enumerated()), id: \.offset) { _, item in
+                                HStack(alignment: .top, spacing: 10) {
+                                    Circle()
+                                        .fill(Color.cyan.opacity(0.75))
+                                        .frame(width: 6, height: 6)
+                                        .padding(.top, 7)
+                                    Text(item)
+                                        .font(.system(size: 15, weight: .regular))
+                                        .foregroundStyle(.white.opacity(0.88))
+                                        .shadow(color: .black.opacity(0.35), radius: 6, y: 1)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 14)
+                        .frame(maxWidth: 420)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(Color.black.opacity(0.28))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                                )
+                        )
+                    }
+                    .padding(.top, 8)
+                }
 
                 Text(TimeFormatting.mmss(fromMilliseconds: remainingMs))
                     .font(.system(size: 56, weight: .ultraLight, design: .rounded))

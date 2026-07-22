@@ -13,6 +13,7 @@ final class BreakOverlayController {
     func show(
         message: String,
         quote: QuoteItem,
+        todos: [String],
         remainingMs: Int,
         progress: Double,
         allowSkip: Bool,
@@ -24,6 +25,7 @@ final class BreakOverlayController {
             let view = BreakOverlayView(
                 message: message,
                 quote: quote,
+                todos: todos,
                 remainingMs: remainingMs,
                 progress: progress,
                 allowSkip: allowSkip,
@@ -61,6 +63,7 @@ final class BreakOverlayController {
             hosting.rootView = BreakOverlayView(
                 message: message,
                 quote: current.quote,
+                todos: current.todos,
                 remainingMs: remainingMs,
                 progress: progress,
                 allowSkip: current.allowSkip,

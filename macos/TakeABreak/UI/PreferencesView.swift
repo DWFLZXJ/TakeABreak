@@ -64,6 +64,61 @@ struct PreferencesView: View {
             }
 
             Section {
+                if model.preferences.todos.isEmpty {
+                    Text("暂无待办。添加后会在休息锁屏上展示已开启的项。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(model.preferences.todos) { item in
+                    HStack(spacing: 10) {
+                        Toggle("", isOn: Binding(
+                            get: { item.isEnabled },
+                            set: { model.updateTodo(id: item.id, isEnabled: $0) }
+                        ))
+                        .labelsHidden()
+                        .toggleStyle(.checkbox)
+                        .help(item.isEnabled ? "休息时显示" : "休息时隐藏")
+
+                        TextField("提醒内容", text: Binding(
+                            get: { item.text },
+                            set: { model.updateTodo(id: item.id, text: $0) }
+                        ))
+                        .textFieldStyle(.roundedBorder)
+
+                        Button {
+                            model.removeTodo(id: item.id)
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("删除")
+                    }
+                }
+
+                HStack {
+                    Button {
+                        model.addTodo()
+                    } label: {
+                        Label("添加待办", systemImage: "plus.circle")
+                    }
+                    .disabled(model.preferences.todos.count >= AppPreferences.maxTodos)
+
+                    Spacer()
+                    Text("\(model.preferences.todos.count)/\(AppPreferences.maxTodos)")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+
+                Text("勾选表示在休息锁屏展示；最多 \(AppPreferences.maxTodos) 条，锁屏最多显示 8 条。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("待办提醒")
+            }
+
+            Section {
                 Toggle("允许长按跳过休息", isOn: skipBinding)
                 Text("关闭后须等休息倒计时结束")
                     .font(.caption)
@@ -122,7 +177,7 @@ struct PreferencesView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 500)
+        .frame(width: 460, height: 620)
         .padding()
         .onAppear {
             workMinutesText = "\(model.preferences.workMinutes)"

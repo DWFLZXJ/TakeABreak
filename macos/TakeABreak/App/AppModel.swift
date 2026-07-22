@@ -145,6 +145,39 @@ final class AppModel: ObservableObject {
         )
     }
 
+    // MARK: - Todos
+
+    func addTodo(text: String = "") {
+        var next = preferences
+        guard next.todos.count < AppPreferences.maxTodos else { return }
+        next.todos.append(TodoItem(text: text.isEmpty ? "新待办" : text, isEnabled: true))
+        preferences = next
+    }
+
+    func updateTodo(id: UUID, text: String? = nil, isEnabled: Bool? = nil) {
+        var next = preferences
+        guard let index = next.todos.firstIndex(where: { $0.id == id }) else { return }
+        if let text {
+            next.todos[index].text = text
+        }
+        if let isEnabled {
+            next.todos[index].isEnabled = isEnabled
+        }
+        preferences = next
+    }
+
+    func removeTodo(id: UUID) {
+        var next = preferences
+        next.todos.removeAll { $0.id == id }
+        preferences = next
+    }
+
+    func moveTodos(from source: IndexSet, to destination: Int) {
+        var next = preferences
+        next.todos.move(fromOffsets: source, toOffset: destination)
+        preferences = next
+    }
+
     // MARK: - Tick & sleep
 
     private func startTicking() {
@@ -167,6 +200,7 @@ final class AppModel: ObservableObject {
             overlay.show(
                 message: displayMessage,
                 quote: QuoteLibrary.random(),
+                todos: preferences.activeTodoTexts,
                 remainingMs: state.remainingMs,
                 progress: state.progress,
                 allowSkip: preferences.allowLongPressSkip,
