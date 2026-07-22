@@ -146,7 +146,8 @@ final class TimerEngineTests: XCTestCase {
             soundEnabled: true,
             idleDetectionEnabled: true,
             idleThresholdMinutes: 3,
-            idleAction: .pause
+            idleAction: .pause,
+            lockScreenWhenBreakEndsIdle: true
         )
     }
 }

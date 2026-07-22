@@ -183,6 +183,11 @@ struct PreferencesView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Toggle("休息结束且无人操作时锁定屏幕", isOn: lockWhenIdleBinding)
+                Text("休息自然结束时若检测到你不在电脑前（约 20 秒无键鼠），自动锁屏，避免泄密。跳过休息不会触发。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
                 Text("锁屏时会暂停计时；休息结束后需手动点「开始下一轮」。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -365,6 +370,13 @@ struct PreferencesView: View {
         Binding(
             get: { model.preferences.idleAction },
             set: { model.preferences.idleAction = $0 }
+        )
+    }
+
+    private var lockWhenIdleBinding: Binding<Bool> {
+        Binding(
+            get: { model.preferences.lockScreenWhenBreakEndsIdle },
+            set: { model.preferences.lockScreenWhenBreakEndsIdle = $0 }
         )
     }
 

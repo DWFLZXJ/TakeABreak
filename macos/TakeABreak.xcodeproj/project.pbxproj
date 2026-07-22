@@ -25,6 +25,7 @@
 		C1D2E3F4A5B60718293A4B5C /* IdleMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2E3F4A5B6C708192A3B4C5D /* IdleMonitor.swift */; };
 		E3F4A5B6C7D8091A2B3C4D5E /* BreakSounds.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A5B6C7D8E90A1B2C3D4E5F /* BreakSounds.swift */; };
 		A5B6C7D8E9F01A2B3C4D5E6F /* DailyStatsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6C7D8E9F0A11B2C3D4E5F60 /* DailyStatsStore.swift */; };
+		C7D8E9F0A1B21C3D4E5F6071 /* ScreenLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8E9F0A1B2C32D4E5F607182 /* ScreenLock.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +60,7 @@
 		D2E3F4A5B6C708192A3B4C5D /* IdleMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleMonitor.swift; sourceTree = "<group>"; };
 		F4A5B6C7D8E90A1B2C3D4E5F /* BreakSounds.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakSounds.swift; sourceTree = "<group>"; };
 		B6C7D8E9F0A11B2C3D4E5F60 /* DailyStatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyStatsStore.swift; sourceTree = "<group>"; };
+		D8E9F0A1B2C32D4E5F607182 /* ScreenLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenLock.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,6 +130,7 @@
 				D1E2F3A4B5C60718293A4B5C /* WallpaperStore.swift */,
 				F0A1B2C3D4E5061728394A5B /* QuoteLibrary.swift */,
 				B2C3D4E5F60718293A4B5C6D /* BreakNotifier.swift */,
+				D8E9F0A1B2C32D4E5F607182 /* ScreenLock.swift */,
 				B6C7D8E9F0A11B2C3D4E5F60 /* DailyStatsStore.swift */,
 				F4A5B6C7D8E90A1B2C3D4E5F /* BreakSounds.swift */,
 				D2E3F4A5B6C708192A3B4C5D /* IdleMonitor.swift */,
@@ -262,6 +265,7 @@
 				C8A1B2D3E4F5061728394A5B /* WallpaperStore.swift in Sources */,
 				E9F0A1B2C3D405162738495A /* QuoteLibrary.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5C /* BreakNotifier.swift in Sources */,
+				C7D8E9F0A1B21C3D4E5F6071 /* ScreenLock.swift in Sources */,
 				A5B6C7D8E9F01A2B3C4D5E6F /* DailyStatsStore.swift in Sources */,
 				E3F4A5B6C7D8091A2B3C4D5E /* BreakSounds.swift in Sources */,
 				C1D2E3F4A5B60718293A4B5C /* IdleMonitor.swift in Sources */,

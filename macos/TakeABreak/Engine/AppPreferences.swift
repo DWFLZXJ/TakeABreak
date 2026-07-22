@@ -75,6 +75,8 @@ struct AppPreferences: Equatable, Sendable, Codable {
     /// Idle threshold in minutes (1–30).
     var idleThresholdMinutes: Int
     var idleAction: IdleAction
+    /// When a break ends naturally and the user has been idle, lock the Mac.
+    var lockScreenWhenBreakEndsIdle: Bool
 
     static let `default` = AppPreferences(
         workMinutes: 25,
@@ -89,7 +91,8 @@ struct AppPreferences: Equatable, Sendable, Codable {
         soundEnabled: true,
         idleDetectionEnabled: true,
         idleThresholdMinutes: 3,
-        idleAction: .pause
+        idleAction: .pause,
+        lockScreenWhenBreakEndsIdle: true
     )
 
     static let workMinutesUIRange = 5...90
@@ -137,6 +140,7 @@ struct AppPreferences: Equatable, Sendable, Codable {
         case wallpaperFolderPath, wallpaperFolderBookmark, todos
         case notifyOnBreakStart, skipDifficulty
         case soundEnabled, idleDetectionEnabled, idleThresholdMinutes, idleAction
+        case lockScreenWhenBreakEndsIdle
     }
 
     init(
@@ -152,7 +156,8 @@ struct AppPreferences: Equatable, Sendable, Codable {
         soundEnabled: Bool,
         idleDetectionEnabled: Bool,
         idleThresholdMinutes: Int,
-        idleAction: IdleAction
+        idleAction: IdleAction,
+        lockScreenWhenBreakEndsIdle: Bool
     ) {
         self.workMinutes = workMinutes
         self.breakMinutes = breakMinutes
@@ -167,6 +172,7 @@ struct AppPreferences: Equatable, Sendable, Codable {
         self.idleDetectionEnabled = idleDetectionEnabled
         self.idleThresholdMinutes = idleThresholdMinutes
         self.idleAction = idleAction
+        self.lockScreenWhenBreakEndsIdle = lockScreenWhenBreakEndsIdle
     }
 
     init(from decoder: Decoder) throws {
@@ -184,5 +190,6 @@ struct AppPreferences: Equatable, Sendable, Codable {
         idleDetectionEnabled = try c.decodeIfPresent(Bool.self, forKey: .idleDetectionEnabled) ?? true
         idleThresholdMinutes = try c.decodeIfPresent(Int.self, forKey: .idleThresholdMinutes) ?? 3
         idleAction = try c.decodeIfPresent(IdleAction.self, forKey: .idleAction) ?? .pause
+        lockScreenWhenBreakEndsIdle = try c.decodeIfPresent(Bool.self, forKey: .lockScreenWhenBreakEndsIdle) ?? true
     }
 }

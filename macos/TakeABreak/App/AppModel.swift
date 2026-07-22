@@ -247,13 +247,33 @@ final class AppModel: ObservableObject {
         if previous != .breaking && next.phase == .breaking {
             enterBreakUI()
         } else if previous == .breaking && next.phase != .breaking {
+            // Natural end → idle. Skip goes to working and is handled in skipBreak().
             leaveBreakUI(playEndSound: true)
+            maybeLockScreenAfterBreakEndedIdle()
         } else if next.phase == .breaking {
             overlay.update(
                 message: displayMessage,
                 remainingMs: next.remainingMs,
                 progress: next.progress
             )
+        }
+    }
+
+    /// Security: if break ended by itself and nobody has been at the Mac, lock the session.
+    private func maybeLockScreenAfterBreakEndedIdle() {
+        guard preferences.lockScreenWhenBreakEndsIdle else { return }
+        // Consider "no operation" if idle for at least 20s, or past the configured idle threshold.
+        let threshold = min(
+            TimeInterval(preferences.idleThresholdMinutes * 60),
+            20
+        )
+        // Use the stricter (shorter) bar of 20s so a short bathroom trip still locks.
+        let idleSeconds = IdleMonitor.secondsSinceLastInput()
+        guard idleSeconds >= threshold else { return }
+
+        // Defer slightly so break-end sound / UI teardown can finish first.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            ScreenLock.lockNow()
         }
     }
 
