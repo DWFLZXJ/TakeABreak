@@ -80,7 +80,7 @@ struct MenuBarPanelView: View {
                     .font(.caption)
             }
         }
-        .buttonStyle(MenuPanelButtonStyle())
+        .buttonStyle(MenuRowButtonStyle())
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
     }
