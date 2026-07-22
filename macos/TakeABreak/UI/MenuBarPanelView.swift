@@ -3,6 +3,8 @@ import SwiftUI
 
 struct MenuBarPanelView: View {
     @EnvironmentObject private var model: AppModel
+    /// Native SwiftUI Settings opener (macOS 14+); still reinforced by PreferencesOpener.
+    @Environment(\.openSettings) private var openSettings
 
     /// Entrance animation state — reset each time the panel opens.
     @State private var appeared = false
@@ -29,7 +31,7 @@ struct MenuBarPanelView: View {
             animatedDivider
 
             footerButton(title: "偏好设置…", shortcut: "⌘,") {
-                model.openPreferences()
+                openPreferencesFromMenu()
             }
             .opacity(contentAppeared ? 1 : 0)
             .offset(y: contentAppeared ? 0 : 8)
@@ -83,6 +85,14 @@ struct MenuBarPanelView: View {
         .buttonStyle(MenuRowButtonStyle())
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+
+    /// Click path: activate + openSettings + robust AppKit fallback for menu-bar apps.
+    private func openPreferencesFromMenu() {
+        // 1) SwiftUI environment action (works when the Settings scene is registered).
+        openSettings()
+        // 2) AppKit fallback: activation policy + order front (fixes click no-op on LSUIElement).
+        PreferencesOpener.open()
     }
 
     private var todayStatsRow: some View {

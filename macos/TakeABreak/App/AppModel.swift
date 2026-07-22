@@ -105,10 +105,7 @@ final class AppModel: ObservableObject {
     }
 
     func openPreferences() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        if #available(macOS 14.0, *) {
-            NSApp.activate(ignoringOtherApps: true)
-        }
+        PreferencesOpener.open()
     }
 
     func quit() {

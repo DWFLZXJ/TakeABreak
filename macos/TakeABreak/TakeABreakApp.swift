@@ -27,6 +27,12 @@ struct TakeABreakApp: App {
                 .environmentObject(model)
         }
         .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("偏好设置…") {
+                    model.openPreferences()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
             CommandGroup(replacing: .appTermination) {
                 Button("退出 Take a Break") {
                     model.quit()
