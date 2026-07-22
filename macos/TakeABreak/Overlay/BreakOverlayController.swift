@@ -16,10 +16,13 @@ final class BreakOverlayController {
         progress: Double,
         allowSkip: Bool,
         wallpaperId: String,
-        wallpaperBookmark: Data?
+        wallpaperImage: NSImage?
     ) {
         hide()
-        let image = loadWallpaper(bookmark: wallpaperBookmark, id: wallpaperId)
+
+        // Prefer the preloaded image; fall back to Application Support for custom.
+        let image = wallpaperImage
+            ?? (wallpaperId == "custom" ? WallpaperStore.loadCustomImage() : nil)
 
         for screen in NSScreen.screens {
             let view = BreakOverlayView(
@@ -49,7 +52,6 @@ final class BreakOverlayController {
             window.ignoresMouseEvents = false
             window.hasShadow = false
             window.isReleasedWhenClosed = false
-            // Cover menu bar / dock area for this screen
             window.setFrame(screen.frame, display: true)
             window.orderFrontRegardless()
             windows.append(window)
@@ -58,7 +60,7 @@ final class BreakOverlayController {
     }
 
     func update(message: String, remainingMs: Int, progress: Double) {
-        for (index, hosting) in hosts.enumerated() {
+        for hosting in hosts {
             let current = hosting.rootView
             hosting.rootView = BreakOverlayView(
                 message: message,
@@ -69,7 +71,6 @@ final class BreakOverlayController {
                 wallpaperImage: current.wallpaperImage,
                 onSkip: current.onSkip
             )
-            _ = index
         }
     }
 
@@ -80,37 +81,5 @@ final class BreakOverlayController {
         }
         windows.removeAll()
         hosts.removeAll()
-    }
-
-    private func loadWallpaper(bookmark: Data?, id: String) -> NSImage? {
-        guard id == "custom", let bookmark else { return nil }
-
-        // Prefer security-scoped resolution; fall back for non-sandboxed builds.
-        let url: URL
-        do {
-            var isStale = false
-            url = try URL(
-                resolvingBookmarkData: bookmark,
-                options: [.withSecurityScope],
-                relativeTo: nil,
-                bookmarkDataIsStale: &isStale
-            )
-        } catch {
-            var isStale = false
-            guard let plain = try? URL(
-                resolvingBookmarkData: bookmark,
-                options: [],
-                relativeTo: nil,
-                bookmarkDataIsStale: &isStale
-            ) else { return nil }
-            url = plain
-        }
-
-        // Without App Sandbox this often returns false; still try to read the file.
-        let accessed = url.startAccessingSecurityScopedResource()
-        defer {
-            if accessed { url.stopAccessingSecurityScopedResource() }
-        }
-        return NSImage(contentsOf: url)
     }
 }

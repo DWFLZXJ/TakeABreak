@@ -12,6 +12,7 @@
 		E60898E6B6884F82BFABE2DB /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65E539A46BF14FD0AFECC343 /* AppPreferences.swift */; };
 		154D3C9EC1A94521BA76ED8F /* TimerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D299E67438524702845DEF4B /* TimerEngine.swift */; };
 		9CE74B2D1FEF4C24B7FFEB0B /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDBF1C4D23214C0E9269AA16 /* PreferencesStore.swift */; };
+		C8A1B2D3E4F5061728394A5B /* WallpaperStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1E2F3A4B5C60718293A4B5C /* WallpaperStore.swift */; };
 		B558DE3D1F8A45579074C763 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18CE7CFAF6924BC8A2F1BEBD /* AppModel.swift */; };
 		D08EC67980AD4516ADF1291E /* MenuBarPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2372FE43E84A519286C25F /* MenuBarPanelView.swift */; };
 		74122C4A5BE746E9974BEEB7 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B7D3517F67E4A859A7A146A /* PreferencesView.swift */; };
@@ -37,6 +38,7 @@
 		65E539A46BF14FD0AFECC343 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		D299E67438524702845DEF4B /* TimerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerEngine.swift; sourceTree = "<group>"; };
 		FDBF1C4D23214C0E9269AA16 /* PreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStore.swift; sourceTree = "<group>"; };
+		D1E2F3A4B5C60718293A4B5C /* WallpaperStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperStore.swift; sourceTree = "<group>"; };
 		18CE7CFAF6924BC8A2F1BEBD /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		BB2372FE43E84A519286C25F /* MenuBarPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarPanelView.swift; sourceTree = "<group>"; };
 		9B7D3517F67E4A859A7A146A /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
@@ -113,6 +115,7 @@
 			isa = PBXGroup;
 			children = (
 				FDBF1C4D23214C0E9269AA16 /* PreferencesStore.swift */,
+				D1E2F3A4B5C60718293A4B5C /* WallpaperStore.swift */,
 				18CE7CFAF6924BC8A2F1BEBD /* AppModel.swift */,
 			);
 			path = App;
@@ -241,6 +244,7 @@
 				E60898E6B6884F82BFABE2DB /* AppPreferences.swift in Sources */,
 				154D3C9EC1A94521BA76ED8F /* TimerEngine.swift in Sources */,
 				9CE74B2D1FEF4C24B7FFEB0B /* PreferencesStore.swift in Sources */,
+				C8A1B2D3E4F5061728394A5B /* WallpaperStore.swift in Sources */,
 				B558DE3D1F8A45579074C763 /* AppModel.swift in Sources */,
 				D08EC67980AD4516ADF1291E /* MenuBarPanelView.swift in Sources */,
 				74122C4A5BE746E9974BEEB7 /* PreferencesView.swift in Sources */,

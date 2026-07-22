@@ -99,41 +99,34 @@ final class AppModel: ObservableObject {
     // MARK: - Wallpaper prefs
 
     func selectBuiltinWallpaper(id: String) {
+        WallpaperStore.clearCustomFiles()
         var next = preferences
         next.wallpaperId = id
         next.wallpaperBookmark = nil
         preferences = next
     }
 
-    /// Apply a user-picked image. Uses security-scoped bookmark when possible.
-    func applyCustomWallpaper(from url: URL) {
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer {
-            if scoped { url.stopAccessingSecurityScopedResource() }
-        }
-
-        let bookmark: Data?
+    /// Copy the picked image into Application Support and mark wallpaper as custom.
+    /// Returns an error message on failure (nil on success).
+    @discardableResult
+    func applyCustomWallpaper(from url: URL) -> String? {
         do {
-            bookmark = try url.bookmarkData(
-                options: [.withSecurityScope],
-                includingResourceValuesForKeys: nil,
-                relativeTo: nil
-            )
+            _ = try WallpaperStore.saveCustom(from: url)
+            var next = preferences
+            next.wallpaperId = "custom"
+            // Bookmarks are unreliable without App Sandbox; file copy is the source of truth.
+            next.wallpaperBookmark = nil
+            preferences = next
+            return nil
         } catch {
-            // Non-sandboxed / some volumes: fall back to a plain bookmark.
-            bookmark = try? url.bookmarkData(
-                options: [],
-                includingResourceValuesForKeys: nil,
-                relativeTo: nil
-            )
+            return error.localizedDescription
         }
+    }
 
-        guard let bookmark else { return }
-
-        var next = preferences
-        next.wallpaperId = "custom"
-        next.wallpaperBookmark = bookmark
-        preferences = next
+    /// Image used for break overlay / prefs thumbnail when `wallpaperId == custom`.
+    func customWallpaperImage() -> NSImage? {
+        guard preferences.wallpaperId == "custom" else { return nil }
+        return WallpaperStore.loadCustomImage()
     }
 
     // MARK: - Tick & sleep
@@ -161,7 +154,7 @@ final class AppModel: ObservableObject {
                 progress: state.progress,
                 allowSkip: preferences.allowLongPressSkip,
                 wallpaperId: preferences.wallpaperId,
-                wallpaperBookmark: preferences.wallpaperBookmark
+                wallpaperImage: customWallpaperImage()
             )
         } else if previous == .breaking && next != .breaking {
             overlay.hide()

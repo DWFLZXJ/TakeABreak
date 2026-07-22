@@ -6,6 +6,8 @@ struct PreferencesView: View {
     @EnvironmentObject private var model: AppModel
     @State private var isImportingWallpaper = false
     @State private var importError: String?
+    /// Bumps when custom wallpaper changes so the thumbnail refreshes.
+    @State private var customThumbToken = 0
 
     var body: some View {
         Form {
@@ -56,23 +58,14 @@ struct PreferencesView: View {
                     wallpaperThumb(id: "default-1", colors: [.indigo, .purple])
                     wallpaperThumb(id: "default-2", colors: [.pink, .orange])
                     wallpaperThumb(id: "default-3", colors: [.cyan, .blue])
-                    Button {
-                        // Activate first so the importer can present in a menu-bar app.
-                        NSApp.activate(ignoringOtherApps: true)
-                        isImportingWallpaper = true
-                    } label: {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                .frame(width: 72, height: 48)
-                            Image(systemName: "plus")
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .help("选择本地图片")
+                    customWallpaperButton
                 }
                 if model.preferences.wallpaperId == "custom" {
-                    Text("已选择自定义壁纸")
+                    Text("已使用自定义图片作为休息壁纸")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("点击 + 选择本地图片")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -88,8 +81,6 @@ struct PreferencesView: View {
         .formStyle(.grouped)
         .frame(width: 420, height: 480)
         .padding()
-        // SwiftUI fileImporter is reliable for LSUIElement / menu-bar apps.
-        // NSOpenPanel.begin often hangs when there is no proper key window.
         .fileImporter(
             isPresented: $isImportingWallpaper,
             allowedContentTypes: [.image],
@@ -98,12 +89,67 @@ struct PreferencesView: View {
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
-                importError = nil
-                model.applyCustomWallpaper(from: url)
+                if let err = model.applyCustomWallpaper(from: url) {
+                    importError = err
+                } else {
+                    importError = nil
+                    customThumbToken += 1
+                }
             case .failure(let error):
                 importError = "无法选择图片：\(error.localizedDescription)"
             }
         }
+        .onAppear {
+            // If prefs say custom but file missing, fall back quietly is handled at break time.
+            customThumbToken += 1
+        }
+    }
+
+    private var customWallpaperButton: some View {
+        let selected = model.preferences.wallpaperId == "custom"
+        return Button {
+            NSApp.activate(ignoringOtherApps: true)
+            isImportingWallpaper = true
+        } label: {
+            ZStack {
+                if let img = model.customWallpaperImage(), selected {
+                    Image(nsImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 72, height: 48)
+                        .clipped()
+                        .cornerRadius(8)
+                        .id(customThumbToken)
+                } else if let img = model.customWallpaperImage() {
+                    Image(nsImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 72, height: 48)
+                        .clipped()
+                        .cornerRadius(8)
+                        .opacity(0.85)
+                        .overlay(
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .shadow(radius: 2)
+                        )
+                        .id(customThumbToken)
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
+                        .frame(width: 72, height: 48)
+                    Image(systemName: "plus")
+                }
+            }
+            .frame(width: 72, height: 48)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(selected ? Color.accentColor : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(.plain)
+        .help("选择本地图片")
     }
 
     private var workMinutesBinding: Binding<Int> {
@@ -139,6 +185,7 @@ struct PreferencesView: View {
         return Button {
             importError = nil
             model.selectBuiltinWallpaper(id: id)
+            customThumbToken += 1
         } label: {
             RoundedRectangle(cornerRadius: 8)
                 .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
