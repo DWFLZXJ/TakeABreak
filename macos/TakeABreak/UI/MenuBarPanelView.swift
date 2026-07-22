@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct MenuBarPanelView: View {
@@ -24,6 +25,24 @@ struct MenuBarPanelView: View {
             .buttonStyle(.plain)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
+
+            Divider()
+
+            Button {
+                model.quit()
+            } label: {
+                HStack {
+                    Text("退出 Take a Break")
+                    Spacer()
+                    Text("⌘Q")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .keyboardShortcut("q", modifiers: .command)
         }
         .frame(width: 280)
     }

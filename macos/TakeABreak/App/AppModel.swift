@@ -37,16 +37,15 @@ final class AppModel: ObservableObject {
 
     // MARK: - Menu bar
 
+    /// Text shown next to the menu bar symbol (empty when idle — icon alone is enough).
     var menuBarTitle: String {
         switch state.phase {
         case .idle:
-            return "◌"
-        case .working:
+            return ""
+        case .working, .breaking:
             return TimeFormatting.mmss(fromMilliseconds: state.remainingMs)
         case .paused:
             return "‖ " + TimeFormatting.mmss(fromMilliseconds: state.remainingMs)
-        case .breaking:
-            return TimeFormatting.mmss(fromMilliseconds: state.remainingMs)
         }
     }
 
@@ -87,6 +86,14 @@ final class AppModel: ObservableObject {
         if #available(macOS 14.0, *) {
             NSApp.activate(ignoringOtherApps: true)
         }
+    }
+
+    /// Stop timer, dismiss overlay, then terminate (menu bar apps have no Dock quit by default).
+    func quit() {
+        engine.stop()
+        overlay.hide()
+        publish()
+        NSApp.terminate(nil)
     }
 
     // MARK: - Tick & sleep
