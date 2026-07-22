@@ -11,6 +11,12 @@ struct MenuBarPanelView: View {
 
             Divider()
 
+            todayStatsRow
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+
+            Divider()
+
             Button {
                 model.openPreferences()
             } label: {
@@ -44,7 +50,33 @@ struct MenuBarPanelView: View {
             .padding(.vertical, 10)
             .keyboardShortcut("q", modifiers: .command)
         }
-        .frame(width: 280)
+        .frame(width: 300)
+    }
+
+    private var todayStatsRow: some View {
+        let s = model.todayStats
+        return VStack(alignment: .leading, spacing: 4) {
+            Text("今日")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+                statChip(title: "完成", value: "\(s.completedRounds) 轮")
+                statChip(title: "专注", value: s.focusDisplay)
+                statChip(title: "跳过", value: "\(s.skipCount) 次")
+            }
+        }
+    }
+
+    private func statChip(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+            Text(value)
+                .font(.caption.weight(.medium))
+                .monospacedDigit()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -55,7 +87,11 @@ struct MenuBarPanelView: View {
         case .working:
             runningContent(label: "工作中", primary: "暂停", primaryAction: model.pause)
         case .paused:
-            runningContent(label: "已暂停", primary: "继续", primaryAction: model.resume)
+            runningContent(
+                label: model.menuBarTitle.hasPrefix("‖") ? "已暂停" : "已暂停",
+                primary: "继续",
+                primaryAction: model.resume
+            )
         case .breaking:
             breakingContent
         }
@@ -63,12 +99,20 @@ struct MenuBarPanelView: View {
 
     private var idleContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("准备开始")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text("工作 \(model.state.workMinutes) 分 · 休息 \(model.state.breakMinutes) 分")
-                .font(.body.weight(.medium))
-            Button("开始专注") {
+            if model.state.roundIndex > 0 {
+                Text("休息结束 · 已完成 \(model.state.roundIndex) 轮")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("点击开始下一轮专注")
+                    .font(.body.weight(.medium))
+            } else {
+                Text("准备开始")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("工作 \(model.state.workMinutes) 分 · 休息 \(model.state.breakMinutes) 分")
+                    .font(.body.weight(.medium))
+            }
+            Button(model.state.roundIndex > 0 ? "开始下一轮" : "开始专注") {
                 model.start()
             }
             .buttonStyle(.borderedProminent)
@@ -117,7 +161,7 @@ struct MenuBarPanelView: View {
                 .font(.system(size: 36, weight: .light, design: .rounded))
                 .monospacedDigit()
             ProgressView(value: model.state.progress)
-            Text("跳过请在全屏画面长按 2 秒")
+            Text("跳过请在全屏画面操作")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
             Button("停止") {

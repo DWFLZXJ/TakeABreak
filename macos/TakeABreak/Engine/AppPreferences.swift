@@ -3,7 +3,6 @@ import Foundation
 struct TodoItem: Identifiable, Equatable, Sendable, Codable, Hashable {
     var id: UUID
     var text: String
-    /// When true, shown on the break / lock screen.
     var isEnabled: Bool
 
     init(id: UUID = UUID(), text: String, isEnabled: Bool = true) {
@@ -13,7 +12,6 @@ struct TodoItem: Identifiable, Equatable, Sendable, Codable, Hashable {
     }
 }
 
-/// How hard it is to skip a break.
 enum SkipDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
     case easy
     case normal
@@ -38,21 +36,45 @@ enum SkipDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// What to do when the user is idle during a work session.
+enum IdleAction: String, Codable, CaseIterable, Identifiable, Sendable {
+    case pause
+    case reset
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .pause: return "暂停"
+        case .reset: return "重置"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .pause: return "空闲时暂停，回来后自动继续"
+        case .reset: return "空闲过久回到待命，需手动再开始"
+        }
+    }
+}
+
 struct AppPreferences: Equatable, Sendable, Codable {
     var workMinutes: Int
     var breakMinutes: Int
     var customMessage: String
     var allowLongPressSkip: Bool
-    /// Absolute path to the folder that holds break wallpapers (random pick each break).
     var wallpaperFolderPath: String?
-    /// Optional security-scoped bookmark for the folder (best-effort; path is primary for non-sandbox).
     var wallpaperFolderBookmark: Data?
-    /// User-defined reminders shown on the break lock screen when enabled.
     var todos: [TodoItem]
-    /// Post a system notification when a break starts.
     var notifyOnBreakStart: Bool
-    /// Skip button chase difficulty (only when allowLongPressSkip is true).
     var skipDifficulty: SkipDifficulty
+    /// Play short sounds when a break starts / ends.
+    var soundEnabled: Bool
+    /// Detect keyboard/mouse idle during work.
+    var idleDetectionEnabled: Bool
+    /// Idle threshold in minutes (1–30).
+    var idleThresholdMinutes: Int
+    var idleAction: IdleAction
 
     static let `default` = AppPreferences(
         workMinutes: 25,
@@ -63,16 +85,22 @@ struct AppPreferences: Equatable, Sendable, Codable {
         wallpaperFolderBookmark: nil,
         todos: [],
         notifyOnBreakStart: true,
-        skipDifficulty: .normal
+        skipDifficulty: .normal,
+        soundEnabled: true,
+        idleDetectionEnabled: true,
+        idleThresholdMinutes: 3,
+        idleAction: .pause
     )
 
     static let workMinutesUIRange = 5...90
     static let breakMinutesRange = 1...30
+    static let idleMinutesRange = 1...30
     static let maxTodos = 20
 
     mutating func clampForStorage() {
         workMinutes = min(max(workMinutes, Self.workMinutesUIRange.lowerBound), Self.workMinutesUIRange.upperBound)
         breakMinutes = min(max(breakMinutes, Self.breakMinutesRange.lowerBound), Self.breakMinutesRange.upperBound)
+        idleThresholdMinutes = min(max(idleThresholdMinutes, Self.idleMinutesRange.lowerBound), Self.idleMinutesRange.upperBound)
         todos = todos
             .map { item in
                 var copy = item
@@ -108,6 +136,7 @@ struct AppPreferences: Equatable, Sendable, Codable {
         case workMinutes, breakMinutes, customMessage, allowLongPressSkip
         case wallpaperFolderPath, wallpaperFolderBookmark, todos
         case notifyOnBreakStart, skipDifficulty
+        case soundEnabled, idleDetectionEnabled, idleThresholdMinutes, idleAction
     }
 
     init(
@@ -119,7 +148,11 @@ struct AppPreferences: Equatable, Sendable, Codable {
         wallpaperFolderBookmark: Data?,
         todos: [TodoItem],
         notifyOnBreakStart: Bool,
-        skipDifficulty: SkipDifficulty
+        skipDifficulty: SkipDifficulty,
+        soundEnabled: Bool,
+        idleDetectionEnabled: Bool,
+        idleThresholdMinutes: Int,
+        idleAction: IdleAction
     ) {
         self.workMinutes = workMinutes
         self.breakMinutes = breakMinutes
@@ -130,6 +163,10 @@ struct AppPreferences: Equatable, Sendable, Codable {
         self.todos = todos
         self.notifyOnBreakStart = notifyOnBreakStart
         self.skipDifficulty = skipDifficulty
+        self.soundEnabled = soundEnabled
+        self.idleDetectionEnabled = idleDetectionEnabled
+        self.idleThresholdMinutes = idleThresholdMinutes
+        self.idleAction = idleAction
     }
 
     init(from decoder: Decoder) throws {
@@ -143,5 +180,9 @@ struct AppPreferences: Equatable, Sendable, Codable {
         todos = try c.decodeIfPresent([TodoItem].self, forKey: .todos) ?? []
         notifyOnBreakStart = try c.decodeIfPresent(Bool.self, forKey: .notifyOnBreakStart) ?? true
         skipDifficulty = try c.decodeIfPresent(SkipDifficulty.self, forKey: .skipDifficulty) ?? .normal
+        soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? true
+        idleDetectionEnabled = try c.decodeIfPresent(Bool.self, forKey: .idleDetectionEnabled) ?? true
+        idleThresholdMinutes = try c.decodeIfPresent(Int.self, forKey: .idleThresholdMinutes) ?? 3
+        idleAction = try c.decodeIfPresent(IdleAction.self, forKey: .idleAction) ?? .pause
     }
 }

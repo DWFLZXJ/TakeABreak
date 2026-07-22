@@ -20,17 +20,7 @@ final class TimerEngineTests: XCTestCase {
     func testStartLocksDurations() {
         var t = 1_000
         let e = TimerEngine(now: { t })
-        e.setPreferences(AppPreferences(
-            workMinutes: 25,
-            breakMinutes: 5,
-            customMessage: "hi",
-            allowLongPressSkip: true,
-            wallpaperFolderPath: nil,
-            wallpaperFolderBookmark: nil,
-            todos: [],
-            notifyOnBreakStart: true,
-            skipDifficulty: .normal
-        ))
+        e.setPreferences(makePrefs(work: 25, break: 5))
         e.start()
         let s = e.getState()
         XCTAssertEqual(s.phase, .working)
@@ -56,7 +46,7 @@ final class TimerEngineTests: XCTestCase {
         XCTAssertEqual(e.getState().phase, .working)
     }
 
-    func testWorkToBreakToNextWork() {
+    func testWorkToBreakThenIdleAwaitingStart() {
         var t = 0
         let e = TimerEngine(now: { t }, minuteMs: 1000)
         e.setPreferences(makePrefs(work: 1, break: 1))
@@ -67,6 +57,10 @@ final class TimerEngineTests: XCTestCase {
         XCTAssertEqual(e.getState().remainingMs, 1000)
         t = 2000
         e.tick()
+        // Natural break end waits for user — does not auto-start next work.
+        XCTAssertEqual(e.getState().phase, .idle)
+        XCTAssertEqual(e.getState().roundIndex, 1)
+        e.start()
         XCTAssertEqual(e.getState().phase, .working)
         XCTAssertEqual(e.getState().roundIndex, 2)
     }
@@ -116,6 +110,8 @@ final class TimerEngineTests: XCTestCase {
         XCTAssertEqual(e.getState().lockedBreakMinutes, 1)
         t = 2000
         e.tick()
+        XCTAssertEqual(e.getState().phase, .idle)
+        e.start()
         XCTAssertEqual(e.getState().lockedWorkMinutes, 10)
         XCTAssertEqual(e.getState().remainingMs, 10_000)
     }
@@ -146,7 +142,11 @@ final class TimerEngineTests: XCTestCase {
             wallpaperFolderBookmark: nil,
             todos: [],
             notifyOnBreakStart: true,
-            skipDifficulty: .normal
+            skipDifficulty: .normal,
+            soundEnabled: true,
+            idleDetectionEnabled: true,
+            idleThresholdMinutes: 3,
+            idleAction: .pause
         )
     }
 }

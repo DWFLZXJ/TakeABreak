@@ -141,7 +141,49 @@ struct PreferencesView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                Text("锁屏时会暂停计时，解锁后从剩余时间继续。")
+                Toggle("休息开始/结束播放提示音", isOn: soundBinding)
+                Text("使用系统提示音：进入休息与休息结束各一声")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Toggle("空闲检测", isOn: idleEnabledBinding)
+                if model.preferences.idleDetectionEnabled {
+                    HStack {
+                        Text("空闲超过")
+                        TextField(
+                            "3",
+                            text: Binding(
+                                get: { "\(model.preferences.idleThresholdMinutes)" },
+                                set: { text in
+                                    if let v = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                                        var p = model.preferences
+                                        p.idleThresholdMinutes = min(
+                                            max(v, AppPreferences.idleMinutesRange.lowerBound),
+                                            AppPreferences.idleMinutesRange.upperBound
+                                        )
+                                        model.preferences = p
+                                    }
+                                }
+                            )
+                        )
+                        .frame(width: 48)
+                        .multilineTextAlignment(.trailing)
+                        .textFieldStyle(.roundedBorder)
+                        Text("分钟")
+                            .foregroundStyle(.secondary)
+                    }
+                    Picker("空闲时", selection: idleActionBinding) {
+                        ForEach(IdleAction.allCases) { action in
+                            Text(action.title).tag(action)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    Text(model.preferences.idleAction.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("锁屏时会暂停计时；休息结束后需手动点「开始下一轮」。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } header: {
@@ -302,6 +344,27 @@ struct PreferencesView: View {
         Binding(
             get: { model.preferences.skipDifficulty },
             set: { model.preferences.skipDifficulty = $0 }
+        )
+    }
+
+    private var soundBinding: Binding<Bool> {
+        Binding(
+            get: { model.preferences.soundEnabled },
+            set: { model.preferences.soundEnabled = $0 }
+        )
+    }
+
+    private var idleEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { model.preferences.idleDetectionEnabled },
+            set: { model.preferences.idleDetectionEnabled = $0 }
+        )
+    }
+
+    private var idleActionBinding: Binding<IdleAction> {
+        Binding(
+            get: { model.preferences.idleAction },
+            set: { model.preferences.idleAction = $0 }
         )
     }
 

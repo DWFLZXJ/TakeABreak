@@ -22,6 +22,9 @@
 		3C1F7C4A434740F29D95FA60 /* BreakOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF25EA7011254E44A7061DF5 /* BreakOverlayController.swift */; };
 		587AE58E3B9B4824875B4E20 /* TimerEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF6AE98311894AC6B3ACA878 /* TimerEngineTests.swift */; };
 		5140EA6BA19A4B0D907A6F46 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EBE8731CC11D4110BA16A768 /* Assets.xcassets */; };
+		C1D2E3F4A5B60718293A4B5C /* IdleMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2E3F4A5B6C708192A3B4C5D /* IdleMonitor.swift */; };
+		E3F4A5B6C7D8091A2B3C4D5E /* BreakSounds.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A5B6C7D8E90A1B2C3D4E5F /* BreakSounds.swift */; };
+		A5B6C7D8E9F01A2B3C4D5E6F /* DailyStatsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6C7D8E9F0A11B2C3D4E5F60 /* DailyStatsStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +56,9 @@
 		2347A15D53EC42378306B4CC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5F87671F58C04138993C63EF /* Take a Break.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Take a Break.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		213EAEEBDC834F8B970AB3EC /* TakeABreakTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TakeABreakTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D2E3F4A5B6C708192A3B4C5D /* IdleMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleMonitor.swift; sourceTree = "<group>"; };
+		F4A5B6C7D8E90A1B2C3D4E5F /* BreakSounds.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakSounds.swift; sourceTree = "<group>"; };
+		B6C7D8E9F0A11B2C3D4E5F60 /* DailyStatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyStatsStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -122,6 +128,9 @@
 				D1E2F3A4B5C60718293A4B5C /* WallpaperStore.swift */,
 				F0A1B2C3D4E5061728394A5B /* QuoteLibrary.swift */,
 				B2C3D4E5F60718293A4B5C6D /* BreakNotifier.swift */,
+				B6C7D8E9F0A11B2C3D4E5F60 /* DailyStatsStore.swift */,
+				F4A5B6C7D8E90A1B2C3D4E5F /* BreakSounds.swift */,
+				D2E3F4A5B6C708192A3B4C5D /* IdleMonitor.swift */,
 				18CE7CFAF6924BC8A2F1BEBD /* AppModel.swift */,
 			);
 			path = App;
@@ -253,6 +262,9 @@
 				C8A1B2D3E4F5061728394A5B /* WallpaperStore.swift in Sources */,
 				E9F0A1B2C3D405162738495A /* QuoteLibrary.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5C /* BreakNotifier.swift in Sources */,
+				A5B6C7D8E9F01A2B3C4D5E6F /* DailyStatsStore.swift in Sources */,
+				E3F4A5B6C7D8091A2B3C4D5E /* BreakSounds.swift in Sources */,
+				C1D2E3F4A5B60718293A4B5C /* IdleMonitor.swift in Sources */,
 				B558DE3D1F8A45579074C763 /* AppModel.swift in Sources */,
 				D08EC67980AD4516ADF1291E /* MenuBarPanelView.swift in Sources */,
 				74122C4A5BE746E9974BEEB7 /* PreferencesView.swift in Sources */,

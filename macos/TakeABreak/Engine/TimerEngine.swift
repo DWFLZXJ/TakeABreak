@@ -1,6 +1,6 @@
 import Foundation
 
-/// Snapshot of the pomodoro engine — mirrors the HTML demo `getState()` shape.
+/// Snapshot of the pomodoro engine.
 struct TimerState: Equatable, Sendable {
     var phase: TimerPhase
     var roundIndex: Int
@@ -15,7 +15,8 @@ struct TimerState: Equatable, Sendable {
     var progress: Double
 }
 
-/// Pure pomodoro state machine (no UI). Semantics match `src/timer-engine.js`.
+/// Pure pomodoro state machine.
+/// After a break ends naturally, returns to Idle and waits for `start()` (does not auto-continue).
 final class TimerEngine: @unchecked Sendable {
     private let now: () -> Int
     private let minuteMs: Int
@@ -28,10 +29,6 @@ final class TimerEngine: @unchecked Sendable {
     private var remainingMs: Int = 0
     private var lastTickAt: Int?
 
-    /// - Parameters:
-    ///   - now: Monotonic-ish millisecond clock; inject for tests.
-    ///   - minuteMs: Milliseconds per "minute" (default 60_000; demos/tests may use 1000).
-    ///   - preferences: Initial prefs.
     init(
         now: @escaping () -> Int = { Int(Date().timeIntervalSince1970 * 1000) },
         minuteMs: Int = 60_000,
@@ -65,7 +62,6 @@ final class TimerEngine: @unchecked Sendable {
 
     func setPreferences(_ partial: AppPreferences) {
         var next = partial
-        // Engine clamp: work 1–90 (UI uses 5–90), break 1–30
         next.workMinutes = min(max(next.workMinutes, 1), 90)
         next.breakMinutes = min(max(next.breakMinutes, 1), 30)
         prefs = next
@@ -77,9 +73,10 @@ final class TimerEngine: @unchecked Sendable {
         setPreferences(copy)
     }
 
+    /// Start or continue: next round index is `roundIndex + 1` (first start → 1).
     func start() {
         guard phase == .idle else { return }
-        enterWorking(nextRound: 1)
+        enterWorking(nextRound: roundIndex + 1)
     }
 
     func pause() {
@@ -103,6 +100,7 @@ final class TimerEngine: @unchecked Sendable {
         lastTickAt = nil
     }
 
+    /// Skip break and immediately start the next work round.
     func skipBreak() {
         guard phase == .breaking else { return }
         guard prefs.allowLongPressSkip else { return }
@@ -123,11 +121,11 @@ final class TimerEngine: @unchecked Sendable {
         if phase == .working {
             enterBreaking()
         } else if phase == .breaking {
-            enterWorking(nextRound: roundIndex + 1)
+            // Wait for user to start the next focus session.
+            finishBreakAwaitingStart()
         }
     }
 
-    /// Freeze clock across sleep: clear lastTick so next tick re-baselines without draining.
     func noteSleep() {
         lastTickAt = nil
     }
@@ -151,6 +149,13 @@ final class TimerEngine: @unchecked Sendable {
         phase = .breaking
         remainingMs = lockedBreakMinutes * minuteMs
         lastTickAt = now()
+    }
+
+    /// Natural break end → Idle, keep roundIndex so UI can say "completed N rounds".
+    private func finishBreakAwaitingStart() {
+        phase = .idle
+        remainingMs = 0
+        lastTickAt = nil
     }
 
     private func progressRatio() -> Double {
