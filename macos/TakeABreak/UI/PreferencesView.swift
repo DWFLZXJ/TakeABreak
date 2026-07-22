@@ -4,6 +4,8 @@ import UniformTypeIdentifiers
 
 struct PreferencesView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var isImportingWallpaper = false
+    @State private var importError: String?
 
     var body: some View {
         Form {
@@ -55,7 +57,9 @@ struct PreferencesView: View {
                     wallpaperThumb(id: "default-2", colors: [.pink, .orange])
                     wallpaperThumb(id: "default-3", colors: [.cyan, .blue])
                     Button {
-                        pickWallpaper()
+                        // Activate first so the importer can present in a menu-bar app.
+                        NSApp.activate(ignoringOtherApps: true)
+                        isImportingWallpaper = true
                     } label: {
                         ZStack {
                             RoundedRectangle(cornerRadius: 8)
@@ -72,6 +76,11 @@ struct PreferencesView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                if let importError {
+                    Text(importError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
             } header: {
                 Text("休息壁纸")
             }
@@ -79,6 +88,22 @@ struct PreferencesView: View {
         .formStyle(.grouped)
         .frame(width: 420, height: 480)
         .padding()
+        // SwiftUI fileImporter is reliable for LSUIElement / menu-bar apps.
+        // NSOpenPanel.begin often hangs when there is no proper key window.
+        .fileImporter(
+            isPresented: $isImportingWallpaper,
+            allowedContentTypes: [.image],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                importError = nil
+                model.applyCustomWallpaper(from: url)
+            case .failure(let error):
+                importError = "无法选择图片：\(error.localizedDescription)"
+            }
+        }
     }
 
     private var workMinutesBinding: Binding<Int> {
@@ -112,8 +137,8 @@ struct PreferencesView: View {
     private func wallpaperThumb(id: String, colors: [Color]) -> some View {
         let selected = model.preferences.wallpaperId == id
         return Button {
-            model.preferences.wallpaperId = id
-            model.preferences.wallpaperBookmark = nil
+            importError = nil
+            model.selectBuiltinWallpaper(id: id)
         } label: {
             RoundedRectangle(cornerRadius: 8)
                 .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
@@ -124,29 +149,5 @@ struct PreferencesView: View {
                 )
         }
         .buttonStyle(.plain)
-    }
-
-    private func pickWallpaper() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.image]
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.begin { response in
-            guard response == .OK, let url = panel.url else { return }
-            do {
-                let data = try url.bookmarkData(
-                    options: [.withSecurityScope],
-                    includingResourceValuesForKeys: nil,
-                    relativeTo: nil
-                )
-                DispatchQueue.main.async {
-                    model.preferences.wallpaperBookmark = data
-                    model.preferences.wallpaperId = "custom"
-                }
-            } catch {
-                // Ignore invalid bookmarks in v1
-            }
-        }
     }
 }

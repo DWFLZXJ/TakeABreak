@@ -96,6 +96,46 @@ final class AppModel: ObservableObject {
         NSApp.terminate(nil)
     }
 
+    // MARK: - Wallpaper prefs
+
+    func selectBuiltinWallpaper(id: String) {
+        var next = preferences
+        next.wallpaperId = id
+        next.wallpaperBookmark = nil
+        preferences = next
+    }
+
+    /// Apply a user-picked image. Uses security-scoped bookmark when possible.
+    func applyCustomWallpaper(from url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer {
+            if scoped { url.stopAccessingSecurityScopedResource() }
+        }
+
+        let bookmark: Data?
+        do {
+            bookmark = try url.bookmarkData(
+                options: [.withSecurityScope],
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
+        } catch {
+            // Non-sandboxed / some volumes: fall back to a plain bookmark.
+            bookmark = try? url.bookmarkData(
+                options: [],
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
+        }
+
+        guard let bookmark else { return }
+
+        var next = preferences
+        next.wallpaperId = "custom"
+        next.wallpaperBookmark = bookmark
+        preferences = next
+    }
+
     // MARK: - Tick & sleep
 
     private func startTicking() {

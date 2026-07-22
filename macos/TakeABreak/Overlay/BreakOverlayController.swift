@@ -84,19 +84,33 @@ final class BreakOverlayController {
 
     private func loadWallpaper(bookmark: Data?, id: String) -> NSImage? {
         guard id == "custom", let bookmark else { return nil }
-        var isStale = false
+
+        // Prefer security-scoped resolution; fall back for non-sandboxed builds.
+        let url: URL
         do {
-            let url = try URL(
+            var isStale = false
+            url = try URL(
                 resolvingBookmarkData: bookmark,
                 options: [.withSecurityScope],
                 relativeTo: nil,
                 bookmarkDataIsStale: &isStale
             )
-            guard url.startAccessingSecurityScopedResource() else { return nil }
-            defer { url.stopAccessingSecurityScopedResource() }
-            return NSImage(contentsOf: url)
         } catch {
-            return nil
+            var isStale = false
+            guard let plain = try? URL(
+                resolvingBookmarkData: bookmark,
+                options: [],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            ) else { return nil }
+            url = plain
         }
+
+        // Without App Sandbox this often returns false; still try to read the file.
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessed { url.stopAccessingSecurityScopedResource() }
+        }
+        return NSImage(contentsOf: url)
     }
 }
