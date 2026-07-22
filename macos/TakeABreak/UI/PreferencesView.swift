@@ -184,7 +184,33 @@ struct PreferencesView: View {
                 }
 
                 Toggle("休息结束且无人操作时锁定屏幕", isOn: lockWhenIdleBinding)
-                Text("休息自然结束时若约 2 秒内无键鼠操作，自动锁屏，避免泄密。跳过休息不会触发。")
+                if model.preferences.lockScreenWhenBreakEndsIdle {
+                    HStack {
+                        Text("空闲超过")
+                        TextField(
+                            "2",
+                            text: Binding(
+                                get: { "\(model.preferences.lockScreenIdleSeconds)" },
+                                set: { text in
+                                    if let v = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                                        var p = model.preferences
+                                        p.lockScreenIdleSeconds = min(
+                                            max(v, AppPreferences.lockScreenIdleSecondsRange.lowerBound),
+                                            AppPreferences.lockScreenIdleSecondsRange.upperBound
+                                        )
+                                        model.preferences = p
+                                    }
+                                }
+                            )
+                        )
+                        .frame(width: 48)
+                        .multilineTextAlignment(.trailing)
+                        .textFieldStyle(.roundedBorder)
+                        Text("秒后锁屏")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Text("休息自然结束时，若空闲达到上述秒数则自动锁屏。跳过休息不会触发。范围 1–120 秒。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 

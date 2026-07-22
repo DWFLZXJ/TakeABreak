@@ -77,6 +77,8 @@ struct AppPreferences: Equatable, Sendable, Codable {
     var idleAction: IdleAction
     /// When a break ends naturally and the user has been idle, lock the Mac.
     var lockScreenWhenBreakEndsIdle: Bool
+    /// Seconds without keyboard/mouse before auto-lock after break ends (1–120).
+    var lockScreenIdleSeconds: Int
 
     static let `default` = AppPreferences(
         workMinutes: 25,
@@ -92,18 +94,25 @@ struct AppPreferences: Equatable, Sendable, Codable {
         idleDetectionEnabled: true,
         idleThresholdMinutes: 3,
         idleAction: .pause,
-        lockScreenWhenBreakEndsIdle: true
+        lockScreenWhenBreakEndsIdle: true,
+        lockScreenIdleSeconds: 2
     )
 
     static let workMinutesUIRange = 5...90
     static let breakMinutesRange = 1...30
     static let idleMinutesRange = 1...30
+    /// Idle seconds before locking after a natural break end.
+    static let lockScreenIdleSecondsRange = 1...120
     static let maxTodos = 20
 
     mutating func clampForStorage() {
         workMinutes = min(max(workMinutes, Self.workMinutesUIRange.lowerBound), Self.workMinutesUIRange.upperBound)
         breakMinutes = min(max(breakMinutes, Self.breakMinutesRange.lowerBound), Self.breakMinutesRange.upperBound)
         idleThresholdMinutes = min(max(idleThresholdMinutes, Self.idleMinutesRange.lowerBound), Self.idleMinutesRange.upperBound)
+        lockScreenIdleSeconds = min(
+            max(lockScreenIdleSeconds, Self.lockScreenIdleSecondsRange.lowerBound),
+            Self.lockScreenIdleSecondsRange.upperBound
+        )
         todos = todos
             .map { item in
                 var copy = item
@@ -140,7 +149,7 @@ struct AppPreferences: Equatable, Sendable, Codable {
         case wallpaperFolderPath, wallpaperFolderBookmark, todos
         case notifyOnBreakStart, skipDifficulty
         case soundEnabled, idleDetectionEnabled, idleThresholdMinutes, idleAction
-        case lockScreenWhenBreakEndsIdle
+        case lockScreenWhenBreakEndsIdle, lockScreenIdleSeconds
     }
 
     init(
@@ -157,7 +166,8 @@ struct AppPreferences: Equatable, Sendable, Codable {
         idleDetectionEnabled: Bool,
         idleThresholdMinutes: Int,
         idleAction: IdleAction,
-        lockScreenWhenBreakEndsIdle: Bool
+        lockScreenWhenBreakEndsIdle: Bool,
+        lockScreenIdleSeconds: Int
     ) {
         self.workMinutes = workMinutes
         self.breakMinutes = breakMinutes
@@ -173,6 +183,7 @@ struct AppPreferences: Equatable, Sendable, Codable {
         self.idleThresholdMinutes = idleThresholdMinutes
         self.idleAction = idleAction
         self.lockScreenWhenBreakEndsIdle = lockScreenWhenBreakEndsIdle
+        self.lockScreenIdleSeconds = lockScreenIdleSeconds
     }
 
     init(from decoder: Decoder) throws {
@@ -191,5 +202,6 @@ struct AppPreferences: Equatable, Sendable, Codable {
         idleThresholdMinutes = try c.decodeIfPresent(Int.self, forKey: .idleThresholdMinutes) ?? 3
         idleAction = try c.decodeIfPresent(IdleAction.self, forKey: .idleAction) ?? .pause
         lockScreenWhenBreakEndsIdle = try c.decodeIfPresent(Bool.self, forKey: .lockScreenWhenBreakEndsIdle) ?? true
+        lockScreenIdleSeconds = try c.decodeIfPresent(Int.self, forKey: .lockScreenIdleSeconds) ?? 2
     }
 }
