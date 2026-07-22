@@ -2,3 +2,6 @@
 .superpowers/
 .worktrees/
 node_modules/
+macos/DerivedData/
+*.xcuserstate
+xcuserdata/
