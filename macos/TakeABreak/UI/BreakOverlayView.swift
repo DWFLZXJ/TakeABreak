@@ -25,10 +25,15 @@ struct BreakOverlayView: View {
     @State private var ghostOrigin: CGPoint?
     @State private var spinAngle: Double = 0
     @State private var pulse = false
+    @State private var hoverFleeTask: Task<Void, Never>?
 
     private let holdDuration: TimeInterval = 2.0
-    private let skipButtonSize: CGFloat = 76
+    private let skipButtonSize: CGFloat = 84
     private let labelExtraHeight: CGFloat = 28
+    /// Auto-jump interval (slower = easier to catch).
+    private let fleeIntervalNs: ClosedRange<UInt64> = 2_200_000_000...3_600_000_000
+    /// Grace time after pointer enters before it flees — enough to click/hold.
+    private let hoverFleeDelayNs: UInt64 = 450_000_000
 
     var body: some View {
         ZStack {
@@ -181,16 +186,24 @@ struct BreakOverlayView: View {
     private var skipButton: some View {
         VStack(spacing: 6) {
             skipButtonVisual(hold: holdProgress, interactive: true)
-                .contentShape(Circle().scale(1.15))
+                // Larger hit area so catching is fairer
+                .contentShape(Circle().scale(1.35))
                 .onHover { hovering in
-                    // Chase: pointer approach makes it jump away unless already holding.
-                    if hovering && !isHolding {
-                        fleeNow(aggressive: true)
+                    hoverFleeTask?.cancel()
+                    hoverFleeTask = nil
+                    // Delay flee so the user has a window to press and hold.
+                    guard hovering, !isHolding else { return }
+                    hoverFleeTask = Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: hoverFleeDelayNs)
+                        guard !Task.isCancelled, !isHolding else { return }
+                        fleeNow(aggressive: false)
                     }
                 }
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { _ in
+                            hoverFleeTask?.cancel()
+                            hoverFleeTask = nil
                             beginHoldIfNeeded()
                         }
                         .onEnded { _ in
@@ -288,11 +301,12 @@ struct BreakOverlayView: View {
         stopFleeLoop()
         fleeTask = Task { @MainActor in
             while !Task.isCancelled {
-                let ns = UInt64.random(in: 480_000_000...900_000_000)
+                let ns = UInt64.random(in: fleeIntervalNs)
                 try? await Task.sleep(nanoseconds: ns)
                 if Task.isCancelled { break }
                 if !isHolding {
-                    fleeNow(aggressive: false)
+                    // Short hops — still playful, but catchable.
+                    fleeNow(maxJumpRatio: 0.35)
                 }
             }
         }
@@ -301,22 +315,22 @@ struct BreakOverlayView: View {
     private func stopFleeLoop() {
         fleeTask?.cancel()
         fleeTask = nil
+        hoverFleeTask?.cancel()
+        hoverFleeTask = nil
     }
 
-    private func fleeNow(aggressive: Bool) {
+    /// - Parameter maxJumpRatio: fraction of screen diagonal for max jump distance (smaller = easier).
+    private func fleeNow(maxJumpRatio: CGFloat = 0.35) {
         guard containerSize.width > 1, containerSize.height > 1 else { return }
         ghostOrigin = skipOrigin
-        let next = aggressive
-            ? randomPointFarFrom(skipOrigin, in: containerSize)
-            : randomPoint(in: containerSize)
-        withAnimation(.spring(response: aggressive ? 0.32 : 0.48, dampingFraction: 0.62)) {
+        let next = randomNearbyPoint(from: skipOrigin, in: containerSize, maxJumpRatio: maxJumpRatio)
+        withAnimation(.spring(response: 0.55, dampingFraction: 0.78)) {
             skipOrigin = next
         }
-        // Fade ghost
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 280_000_000)
+            try? await Task.sleep(nanoseconds: 320_000_000)
             if ghostOrigin != nil {
-                withAnimation(.easeOut(duration: 0.2)) {
+                withAnimation(.easeOut(duration: 0.25)) {
                     ghostOrigin = nil
                 }
             }
@@ -336,19 +350,25 @@ struct BreakOverlayView: View {
         )
     }
 
-    /// Prefer a point not too close to current (harder to catch).
-    private func randomPointFarFrom(_ current: CGPoint, in size: CGSize) -> CGPoint {
-        var best = randomPoint(in: size)
-        var bestDist: CGFloat = 0
-        for _ in 0..<8 {
-            let p = randomPoint(in: size)
-            let d = hypot(p.x - current.x, p.y - current.y)
-            if d > bestDist {
-                bestDist = d
-                best = p
+    /// Jump a limited distance so the button does not teleport across the whole screen.
+    private func randomNearbyPoint(from current: CGPoint, in size: CGSize, maxJumpRatio: CGFloat) -> CGPoint {
+        let diagonal = hypot(size.width, size.height)
+        let maxJump = max(120, diagonal * maxJumpRatio)
+        let minJump = max(48, maxJump * 0.35)
+
+        for _ in 0..<12 {
+            let angle = CGFloat.random(in: 0...(2 * .pi))
+            let dist = CGFloat.random(in: minJump...maxJump)
+            let candidate = CGPoint(
+                x: current.x + cos(angle) * dist,
+                y: current.y + sin(angle) * dist
+            )
+            let clamped = clamp(candidate, in: size)
+            if hypot(clamped.x - current.x, clamped.y - current.y) >= minJump * 0.5 {
+                return clamped
             }
         }
-        return best
+        return randomPoint(in: size)
     }
 
     private func clamp(_ point: CGPoint, in size: CGSize) -> CGPoint {
@@ -365,6 +385,8 @@ struct BreakOverlayView: View {
     private func beginHoldIfNeeded() {
         guard holdTask == nil else { return }
         isHolding = true
+        hoverFleeTask?.cancel()
+        hoverFleeTask = nil
         holdProgress = 0
         holdTask = Task { @MainActor in
             let steps = 50
