@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MenuBarPanelView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.colorScheme) private var colorScheme
     /// Native SwiftUI Settings opener (macOS 14+); still reinforced by PreferencesOpener.
     @Environment(\.openSettings) private var openSettings
 
@@ -17,19 +18,19 @@ struct MenuBarPanelView: View {
             content
                 .padding(16)
 
-            Divider()
+            softDivider
 
             todayStatsRow
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
 
-            Divider()
+            softDivider
 
             footerButton(title: "偏好设置…", shortcut: "⌘,") {
                 openPreferencesFromMenu()
             }
 
-            Divider()
+            softDivider
 
             footerButton(title: "退出 Take a Break", shortcut: "⌘Q") {
                 model.quit()
@@ -37,13 +38,38 @@ struct MenuBarPanelView: View {
             .keyboardShortcut("q", modifiers: .command)
         }
         .frame(width: 300)
+        // Lighter frosted glass — more transparent, less “solid card”
+        .background {
+            ZStack {
+                // Ultra-thin material reads more premium / airy
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                // Extra veil so blur shows through more (lower opacity = glassier)
+                Rectangle()
+                    .fill(colorScheme == .dark
+                          ? Color.black.opacity(0.12)
+                          : Color.white.opacity(0.18))
+            }
+            .ignoresSafeArea()
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(
+                    colorScheme == .dark
+                        ? Color.white.opacity(0.10)
+                        : Color.black.opacity(0.06),
+                    lineWidth: 0.5
+                )
+        )
+        // Clear host window so material can blur the desktop
+        .background(MenuBarGlassWindowConfigurer())
         // Fast bounce pop from menu bar
         .opacity(appeared ? 1 : 0)
         .scaleEffect(x: appeared ? 1 : 0.88, y: appeared ? 1 : 0.82, anchor: .top)
         .offset(y: appeared ? 0 : -16)
         .onAppear {
             appeared = false
-            // Next runloop so the "from" state paints, then bounce in.
             DispatchQueue.main.async {
                 withAnimation(popSpring) {
                     appeared = true
@@ -53,6 +79,11 @@ struct MenuBarPanelView: View {
         .onDisappear {
             appeared = false
         }
+    }
+
+    private var softDivider: some View {
+        Divider()
+            .opacity(colorScheme == .dark ? 0.35 : 0.45)
     }
 
     private func footerButton(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
@@ -70,11 +101,8 @@ struct MenuBarPanelView: View {
         .padding(.vertical, 10)
     }
 
-    /// Click path: activate + openSettings + robust AppKit fallback for menu-bar apps.
     private func openPreferencesFromMenu() {
-        // 1) SwiftUI environment action (works when the Settings scene is registered).
         openSettings()
-        // 2) AppKit fallback: activation policy + order front (fixes click no-op on LSUIElement).
         PreferencesOpener.open()
     }
 
@@ -140,7 +168,7 @@ struct MenuBarPanelView: View {
             Button(model.state.roundIndex > 0 ? "开始下一轮" : "开始专注") {
                 model.start()
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(QuietPrimaryButtonStyle())
             .controlSize(.large)
             .frame(maxWidth: .infinity)
         }
@@ -165,16 +193,16 @@ struct MenuBarPanelView: View {
                 .contentTransition(.numericText())
                 .animation(.snappy(duration: 0.2), value: model.state.remainingMs)
             ProgressView(value: model.state.progress)
-                .tint(Color.accentColor)
+                .tint(Color.primary.opacity(0.35))
                 .animation(.easeInOut(duration: 0.25), value: model.state.progress)
             HStack(spacing: 8) {
                 Button(primary, action: primaryAction)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(QuietSecondaryButtonStyle())
                     .frame(maxWidth: .infinity)
                 Button("停止") {
                     model.stop()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(QuietSecondaryButtonStyle())
                 .frame(maxWidth: .infinity)
             }
         }
@@ -191,6 +219,7 @@ struct MenuBarPanelView: View {
                 .contentTransition(.numericText())
                 .animation(.snappy(duration: 0.2), value: model.state.remainingMs)
             ProgressView(value: model.state.progress)
+                .tint(Color.primary.opacity(0.35))
                 .animation(.easeInOut(duration: 0.25), value: model.state.progress)
             Text("跳过请在全屏画面操作")
                 .font(.caption2)
@@ -198,21 +227,112 @@ struct MenuBarPanelView: View {
             Button("停止") {
                 model.stop()
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(QuietSecondaryButtonStyle())
             .frame(maxWidth: .infinity)
         }
     }
 }
 
-/// Subtle highlight on hover for footer rows (menu-like feel).
+// MARK: - Styles
+
+/// Soft gray primary — no system blue.
+private struct QuietPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body.weight(.medium))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.92) : Color.primary.opacity(0.88))
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(colorScheme == .dark
+                          ? Color.white.opacity(configuration.isPressed ? 0.16 : 0.12)
+                          : Color.black.opacity(configuration.isPressed ? 0.10 : 0.07))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(
+                        colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.06),
+                        lineWidth: 0.5
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+private struct QuietSecondaryButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body.weight(.regular))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+            .foregroundStyle(.primary.opacity(0.85))
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(colorScheme == .dark
+                          ? Color.white.opacity(configuration.isPressed ? 0.10 : 0.06)
+                          : Color.black.opacity(configuration.isPressed ? 0.07 : 0.045))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(
+                        colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05),
+                        lineWidth: 0.5
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
 private struct MenuRowButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(configuration.isPressed ? Color.primary.opacity(0.08) : Color.clear)
+                    .fill(configuration.isPressed
+                          ? Color.primary.opacity(colorScheme == .dark ? 0.10 : 0.06)
+                          : Color.clear)
             )
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Window glass
+
+/// Makes the MenuBarExtra host window transparent so `.ultraThinMaterial` can blur the desktop.
+private struct MenuBarGlassWindowConfigurer: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            configure(view.window)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            configure(nsView.window)
+        }
+    }
+
+    private func configure(_ window: NSWindow?) {
+        guard let window else { return }
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        // Slightly stronger blur vignette via titlebar-less visual effect if available
+        window.hasShadow = true
+        if let content = window.contentView {
+            content.wantsLayer = true
+            content.layer?.backgroundColor = NSColor.clear.cgColor
+        }
     }
 }
