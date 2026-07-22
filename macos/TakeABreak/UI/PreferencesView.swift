@@ -184,7 +184,7 @@ struct PreferencesView: View {
                 }
 
                 Toggle("休息结束且无人操作时锁定屏幕", isOn: lockWhenIdleBinding)
-                Text("休息自然结束时若检测到你不在电脑前（约 20 秒无键鼠），自动锁屏，避免泄密。跳过休息不会触发。")
+                Text("休息自然结束时若约 2 秒内无键鼠操作，自动锁屏，避免泄密。跳过休息不会触发。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 

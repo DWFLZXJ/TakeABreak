@@ -262,12 +262,8 @@ final class AppModel: ObservableObject {
     /// Security: if break ended by itself and nobody has been at the Mac, lock the session.
     private func maybeLockScreenAfterBreakEndedIdle() {
         guard preferences.lockScreenWhenBreakEndsIdle else { return }
-        // Consider "no operation" if idle for at least 20s, or past the configured idle threshold.
-        let threshold = min(
-            TimeInterval(preferences.idleThresholdMinutes * 60),
-            20
-        )
-        // Use the stricter (shorter) bar of 20s so a short bathroom trip still locks.
+        // 2s without keyboard/mouse ≈ user is away; lock immediately after break ends.
+        let threshold: TimeInterval = 2
         let idleSeconds = IdleMonitor.secondsSinceLastInput()
         guard idleSeconds >= threshold else { return }
 
