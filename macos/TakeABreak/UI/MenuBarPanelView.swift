@@ -8,68 +8,51 @@ struct MenuBarPanelView: View {
 
     /// Entrance animation state — reset each time the panel opens.
     @State private var appeared = false
-    @State private var contentAppeared = false
 
-    private let spring = Animation.spring(response: 0.42, dampingFraction: 0.86, blendDuration: 0.1)
-    private let contentSpring = Animation.spring(response: 0.48, dampingFraction: 0.88)
+    /// Snappy bounce: quick pop with a short overshoot.
+    private let popSpring = Animation.spring(response: 0.28, dampingFraction: 0.62, blendDuration: 0)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             content
                 .padding(16)
-                .opacity(contentAppeared ? 1 : 0)
-                .offset(y: contentAppeared ? 0 : 6)
 
-            animatedDivider
+            Divider()
 
             todayStatsRow
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .opacity(contentAppeared ? 1 : 0)
-                .offset(y: contentAppeared ? 0 : 8)
 
-            animatedDivider
+            Divider()
 
             footerButton(title: "偏好设置…", shortcut: "⌘,") {
                 openPreferencesFromMenu()
             }
-            .opacity(contentAppeared ? 1 : 0)
-            .offset(y: contentAppeared ? 0 : 8)
 
-            animatedDivider
+            Divider()
 
             footerButton(title: "退出 Take a Break", shortcut: "⌘Q") {
                 model.quit()
             }
             .keyboardShortcut("q", modifiers: .command)
-            .opacity(contentAppeared ? 1 : 0)
-            .offset(y: contentAppeared ? 0 : 8)
         }
         .frame(width: 300)
-        // Panel shell: drop from menu bar + fade + slight scale
+        // Fast bounce pop from menu bar
         .opacity(appeared ? 1 : 0)
-        .scaleEffect(appeared ? 1 : 0.94, anchor: .top)
-        .offset(y: appeared ? 0 : -12)
+        .scaleEffect(x: appeared ? 1 : 0.88, y: appeared ? 1 : 0.82, anchor: .top)
+        .offset(y: appeared ? 0 : -16)
         .onAppear {
-            // Reset then animate in (next open of MenuBarExtra recreates/reappears content)
             appeared = false
-            contentAppeared = false
-            withAnimation(spring) {
-                appeared = true
-            }
-            withAnimation(contentSpring.delay(0.04)) {
-                contentAppeared = true
+            // Next runloop so the "from" state paints, then bounce in.
+            DispatchQueue.main.async {
+                withAnimation(popSpring) {
+                    appeared = true
+                }
             }
         }
         .onDisappear {
             appeared = false
-            contentAppeared = false
         }
-    }
-
-    private var animatedDivider: some View {
-        Divider()
-            .opacity(contentAppeared ? 1 : 0)
     }
 
     private func footerButton(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
