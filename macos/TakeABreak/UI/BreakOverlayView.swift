@@ -196,7 +196,7 @@ struct BreakOverlayView: View {
                     hoverFleeTask = Task { @MainActor in
                         try? await Task.sleep(nanoseconds: hoverFleeDelayNs)
                         guard !Task.isCancelled, !isHolding else { return }
-                        fleeNow(aggressive: false)
+                        fleeNow(maxJumpRatio: 0.35)
                     }
                 }
                 .gesture(
