@@ -166,6 +166,7 @@ final class AppModel: ObservableObject {
         if previous != .breaking && next == .breaking {
             overlay.show(
                 message: displayMessage,
+                quote: QuoteLibrary.random(),
                 remainingMs: state.remainingMs,
                 progress: state.progress,
                 allowSkip: preferences.allowLongPressSkip,

@@ -3,6 +3,8 @@ import SwiftUI
 
 struct BreakOverlayView: View {
     let message: String
+    /// Random famous quote / poem line for this break session.
+    let quote: QuoteItem
     let remainingMs: Int
     let progress: Double
     let allowSkip: Bool
@@ -26,18 +28,32 @@ struct BreakOverlayView: View {
                 endRadius: 900
             )
 
-            VStack(spacing: 20) {
+            VStack(spacing: 18) {
                 Text("休息中")
                     .font(.system(size: 12, weight: .medium))
                     .tracking(4)
                     .foregroundStyle(.white.opacity(0.45))
 
                 Text(message)
-                    .font(.system(size: 28, weight: .light))
+                    .font(.system(size: 26, weight: .light))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white.opacity(0.92))
                     .shadow(color: .black.opacity(0.35), radius: 12, y: 2)
                     .padding(.horizontal, 48)
+
+                VStack(spacing: 8) {
+                    Text(quote.text)
+                        .font(.system(size: 17, weight: .regular))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.white.opacity(0.78))
+                        .shadow(color: .black.opacity(0.3), radius: 8, y: 1)
+                        .padding(.horizontal, 56)
+                        .lineLimit(4)
+                    Text("—— \(quote.source)")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.45))
+                }
+                .padding(.top, 4)
 
                 Text(TimeFormatting.mmss(fromMilliseconds: remainingMs))
                     .font(.system(size: 56, weight: .ultraLight, design: .rounded))
@@ -45,6 +61,7 @@ struct BreakOverlayView: View {
                     .tracking(4)
                     .foregroundStyle(.white.opacity(0.9))
                     .shadow(color: .black.opacity(0.3), radius: 10, y: 2)
+                    .padding(.top, 6)
 
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {

@@ -12,6 +12,7 @@ final class BreakOverlayController {
 
     func show(
         message: String,
+        quote: QuoteItem,
         remainingMs: Int,
         progress: Double,
         allowSkip: Bool,
@@ -22,6 +23,7 @@ final class BreakOverlayController {
         for screen in NSScreen.screens {
             let view = BreakOverlayView(
                 message: message,
+                quote: quote,
                 remainingMs: remainingMs,
                 progress: progress,
                 allowSkip: allowSkip,
@@ -58,6 +60,7 @@ final class BreakOverlayController {
             let current = hosting.rootView
             hosting.rootView = BreakOverlayView(
                 message: message,
+                quote: current.quote,
                 remainingMs: remainingMs,
                 progress: progress,
                 allowSkip: current.allowSkip,
